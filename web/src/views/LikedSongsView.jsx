@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Pause, Clock, Heart, ArrowLeft } from 'lucide-react';
+import { Play, Pause, Clock, Heart, ArrowLeft, Music } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { TrackRowSkeleton } from '../components/Common/SkeletonLoader';
 
 export default function LikedSongsView({ onBack }) {
   const { playTrack, currentTrack, isPlaying, toggleLike, isLiked } = usePlayer();
@@ -20,21 +21,24 @@ export default function LikedSongsView({ onBack }) {
   const isLikedPlaying = tracks.some(t => t.id === currentTrack?.id) && isPlaying;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in duration-200">
-      <button onClick={onBack} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+    <div className="space-y-6 pb-16 animate-in fade-in duration-300">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+      >
         <ArrowLeft size={16} />
         Back
       </button>
 
       {/* Hero Header */}
-      <div className="flex flex-col md:flex-row items-center md:items-end gap-6 bg-gradient-to-b from-indigo-900/40 via-purple-950/20 to-transparent p-6 rounded-3xl border border-indigo-500/20">
-        <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center shadow-2xl flex-shrink-0">
+      <div className="flex flex-col md:flex-row items-center md:items-end gap-6 bg-gradient-to-b from-purple-900/40 via-purple-950/20 to-transparent p-6 rounded-3xl border border-purple-500/20">
+        <div className="w-44 h-44 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-600 flex items-center justify-center shadow-2xl shrink-0">
           <Heart size={64} className="fill-white text-white drop-shadow-md" />
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden text-center md:text-left">
           <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">Playlist</span>
-          <h1 className="text-3xl md:text-5xl font-black text-white mt-1 mb-3">Liked Songs</h1>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+          <h1 className="text-3xl sm:text-5xl font-black text-white mt-1 mb-3">Liked Songs</h1>
+          <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-semibold text-slate-300">
             <span>@{user?.username || 'user'}</span>
             <span>•</span>
             <span>{tracks.length} songs</span>
@@ -46,21 +50,24 @@ export default function LikedSongsView({ onBack }) {
         <div className="py-2">
           <button
             onClick={() => playTrack(tracks[0], tracks)}
-            className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-xl shadow-purple-900/50 hover:scale-105 active:scale-95 transition"
+            className="w-14 h-14 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent hover:scale-105 active:scale-95 transition"
+            title={isLikedPlaying ? 'Pause' : 'Play Liked Songs'}
           >
-            {isLikedPlaying ? <Pause size={24} className="fill-white" /> : <Play size={24} className="fill-white ml-1" />}
+            {isLikedPlaying ? (
+              <Pause size={24} className="fill-white" />
+            ) : (
+              <Play size={24} className="fill-white ml-1" />
+            )}
           </button>
         </div>
       )}
 
       {/* Tracks Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <TrackRowSkeleton count={8} />
       ) : tracks.length === 0 ? (
         <div className="text-center py-20 text-slate-400 text-sm">
-          No liked songs yet. Tap the heart icon next to any song to add it here!
+          No liked songs yet. Click the heart icon on any song to save it here!
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -76,6 +83,8 @@ export default function LikedSongsView({ onBack }) {
             <tbody className="divide-y divide-audira-border/30">
               {tracks.map((track, index) => {
                 const isCurrent = currentTrack?.id === track.id;
+                const isCurrentPlaying = isCurrent && isPlaying;
+
                 return (
                   <tr
                     key={track.id}
@@ -83,12 +92,14 @@ export default function LikedSongsView({ onBack }) {
                     className={`group hover:bg-audira-card/60 transition cursor-pointer ${isCurrent ? 'bg-purple-950/20' : ''}`}
                   >
                     <td className="py-3 px-3 text-center text-slate-400 font-bold">
-                      <span className="group-hover:hidden">{index + 1}</span>
+                      <span className="group-hover:hidden">
+                        {isCurrentPlaying ? '▶' : index + 1}
+                      </span>
                       <Play size={13} className="hidden group-hover:inline fill-white text-white mx-auto" />
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img src={track.cover_url} alt={track.title} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        <img src={track.cover_url} alt={track.title} className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm" />
                         <div>
                           <p className={`font-bold truncate ${isCurrent ? 'text-purple-400' : 'text-white'}`}>{track.title}</p>
                           <p className="text-[11px] text-slate-400 truncate">{track.artist_name}</p>

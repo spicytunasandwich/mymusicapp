@@ -3,6 +3,7 @@ import { Play, Pause, Clock, Heart, Trash2, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { TrackRowSkeleton } from '../components/Common/SkeletonLoader';
 
 export default function PlaylistView({ playlistId, onBack }) {
   const { playTrack, currentTrack, isPlaying, toggleLike, isLiked } = usePlayer();
@@ -34,8 +35,12 @@ export default function PlaylistView({ playlistId, onBack }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 pb-16 animate-in fade-in duration-300">
+        <button onClick={onBack} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+          <ArrowLeft size={16} /> Back
+        </button>
+        <div className="h-48 rounded-3xl bg-audira-card/50 shimmer-bg" />
+        <TrackRowSkeleton count={6} />
       </div>
     );
   }
@@ -53,7 +58,7 @@ export default function PlaylistView({ playlistId, onBack }) {
   const isOwner = user?.id === playlist.user_id;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in duration-200">
+    <div className="space-y-6 pb-16 animate-in fade-in duration-300">
       {/* Back button */}
       <button
         onClick={onBack}
@@ -65,7 +70,7 @@ export default function PlaylistView({ playlistId, onBack }) {
 
       {/* Playlist Hero Header */}
       <div className="flex flex-col md:flex-row items-center md:items-end gap-6 bg-gradient-to-b from-purple-950/40 to-transparent p-6 rounded-3xl border border-purple-500/10">
-        <div className="w-48 h-48 rounded-2xl overflow-hidden bg-audira-card shadow-2xl flex-shrink-0 border border-audira-border">
+        <div className="w-44 h-44 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-audira-card shadow-2xl shrink-0 border border-white/10">
           <img
             src={playlist.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600'}
             alt={playlist.title}
@@ -73,12 +78,12 @@ export default function PlaylistView({ playlistId, onBack }) {
           />
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden text-center md:text-left">
           <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400">Public Playlist</span>
-          <h1 className="text-3xl md:text-5xl font-black text-white mt-1 mb-3 truncate">{playlist.title}</h1>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white mt-1 mb-3 truncate">{playlist.title}</h1>
           <p className="text-xs text-slate-400 line-clamp-2 max-w-2xl">{playlist.description}</p>
 
-          <div className="flex items-center gap-3 mt-4 text-xs font-semibold text-slate-300">
+          <div className="flex items-center justify-center md:justify-start gap-3 mt-4 text-xs font-semibold text-slate-300">
             <span>By <b>@{playlist.owner_username}</b></span>
             <span>•</span>
             <span>{playlist.tracks?.length || 0} songs</span>
@@ -98,9 +103,14 @@ export default function PlaylistView({ playlistId, onBack }) {
               playTrack(playlist.tracks[0], playlist.tracks);
             }
           }}
-          className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-xl shadow-purple-900/50 hover:scale-105 active:scale-95 transition"
+          className="w-14 h-14 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent hover:scale-105 active:scale-95 transition"
+          title={isCurrentPlaylistPlaying ? 'Pause' : 'Play Playlist'}
         >
-          {isCurrentPlaylistPlaying ? <Pause size={24} className="fill-white" /> : <Play size={24} className="fill-white ml-1" />}
+          {isCurrentPlaylistPlaying ? (
+            <Pause size={24} className="fill-white" />
+          ) : (
+            <Play size={24} className="fill-white ml-1" />
+          )}
         </button>
       </div>
 
@@ -119,6 +129,8 @@ export default function PlaylistView({ playlistId, onBack }) {
           <tbody className="divide-y divide-audira-border/30">
             {playlist.tracks?.map((track, index) => {
               const isCurrent = currentTrack?.id === track.id;
+              const isCurrentPlaying = isCurrent && isPlaying;
+
               return (
                 <tr
                   key={track.id}
@@ -126,12 +138,14 @@ export default function PlaylistView({ playlistId, onBack }) {
                   className={`group hover:bg-audira-card/60 transition cursor-pointer ${isCurrent ? 'bg-purple-950/20' : ''}`}
                 >
                   <td className="py-3 px-3 text-center text-slate-400 font-bold">
-                    <span className="group-hover:hidden">{index + 1}</span>
+                    <span className="group-hover:hidden">
+                      {isCurrentPlaying ? '▶' : index + 1}
+                    </span>
                     <Play size={13} className="hidden group-hover:inline fill-white text-white mx-auto" />
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <img src={track.cover_url} alt={track.title} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      <img src={track.cover_url} alt={track.title} className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm" />
                       <div>
                         <p className={`font-bold truncate ${isCurrent ? 'text-purple-400' : 'text-white'}`}>{track.title}</p>
                         <p className="text-[11px] text-slate-400 truncate">{track.artist_name}</p>
