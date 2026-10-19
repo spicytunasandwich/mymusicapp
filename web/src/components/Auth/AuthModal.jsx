@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Lock, User, AtSign, ArrowRight, Sparkles, KeyRound, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { X, Mail, Lock, User, AtSign, ArrowRight, Sparkles, KeyRound, Clock, AlertCircle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AuthModal() {
@@ -387,10 +387,11 @@ export default function AuthModal() {
                   <input
                     type="text"
                     required
+                    disabled={loading}
                     placeholder="demo@audira.io or audiophile"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -400,8 +401,9 @@ export default function AuthModal() {
                   <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => { setMode('forgot'); resetMessages(); }}
-                    className="text-[11px] text-purple-400 hover:text-purple-300 transition"
+                    className="text-[11px] text-purple-400 hover:text-purple-300 transition disabled:opacity-50"
                   >
                     Forgot password?
                   </button>
@@ -411,10 +413,11 @@ export default function AuthModal() {
                   <input
                     type="password"
                     required
+                    disabled={loading}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -422,10 +425,19 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-50"
+                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading ? 'Logging in...' : 'Log In'}
-                <ArrowRight size={15} />
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-white" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Log In</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -440,10 +452,11 @@ export default function AuthModal() {
                   <input
                     type="text"
                     required
+                    disabled={loading}
                     placeholder="e.g. Alex Rivers"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -455,10 +468,11 @@ export default function AuthModal() {
                   <input
                     type="text"
                     required
+                    disabled={loading}
                     placeholder="e.g. audiophile"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -470,10 +484,11 @@ export default function AuthModal() {
                   <input
                     type="email"
                     required
+                    disabled={loading}
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -485,10 +500,11 @@ export default function AuthModal() {
                   <input
                     type="password"
                     required
+                    disabled={loading}
                     placeholder="Min 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -496,10 +512,19 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-50"
+                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating account...' : 'Create Account & Get 6-Digit Code'}
-                <ArrowRight size={15} />
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-white" />
+                    <span>Creating account & sending code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create Account & Get 6-Digit Code</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -523,10 +548,11 @@ export default function AuthModal() {
                     maxLength={6}
                     required
                     autoFocus
+                    disabled={loading}
                     placeholder="123456"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-10 pr-4 py-3 text-center text-lg font-mono font-bold tracking-[8px] text-cyan-300 placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-10 pr-4 py-3 text-center text-lg font-mono font-bold tracking-[8px] text-cyan-300 placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -534,17 +560,27 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading || otpCode.length !== 6}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/40 hover:opacity-95 transition disabled:opacity-50"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading ? 'Verifying code...' : 'Verify & Enter Audira'}
-                <ArrowRight size={15} />
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-white" />
+                    <span>Verifying code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Verify & Enter Audira</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
 
               <div className="flex items-center justify-between pt-2 text-xs">
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-slate-400 hover:text-white transition"
+                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
                 >
                   ← Back to Log In
                 </button>
@@ -555,7 +591,7 @@ export default function AuthModal() {
                   disabled={cooldown > 0 || loading}
                   className="text-purple-400 hover:text-purple-300 font-semibold transition disabled:text-slate-600 flex items-center gap-1"
                 >
-                  <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                   {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
                 </button>
               </div>
@@ -574,10 +610,11 @@ export default function AuthModal() {
                   <input
                     type="email"
                     required
+                    disabled={loading}
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -585,17 +622,27 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-50"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading ? 'Sending code...' : 'Send 6-Digit Reset Code'}
-                <ArrowRight size={15} />
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-white" />
+                    <span>Sending code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send 6-Digit Reset Code</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
 
               <div className="text-center pt-2">
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-xs text-slate-400 hover:text-white transition"
+                  className="text-xs text-slate-400 hover:text-white transition disabled:opacity-50"
                 >
                   ← Back to Log In
                 </button>
@@ -620,10 +667,11 @@ export default function AuthModal() {
                   maxLength={6}
                   required
                   autoFocus
+                  disabled={loading}
                   placeholder="123456"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[8px] text-purple-300 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                  className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[8px] text-purple-300 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                 />
               </div>
 
@@ -636,10 +684,11 @@ export default function AuthModal() {
                   <input
                     type="password"
                     required
+                    disabled={loading}
                     placeholder="Min 6 characters"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
+                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -647,17 +696,27 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading || otpCode.length !== 6 || newPassword.length < 6}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-50"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading ? 'Resetting password...' : 'Set New Password & Log In'}
-                <ArrowRight size={15} />
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-white" />
+                    <span>Resetting password...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Set New Password & Log In</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
 
               <div className="flex items-center justify-between pt-2 text-xs">
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-slate-400 hover:text-white transition"
+                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
                 >
                   ← Back to Log In
                 </button>
@@ -668,7 +727,7 @@ export default function AuthModal() {
                   disabled={cooldown > 0 || loading}
                   className="text-purple-400 hover:text-purple-300 font-semibold transition disabled:text-slate-600 flex items-center gap-1"
                 >
-                  <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                   {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
                 </button>
               </div>
@@ -679,3 +738,4 @@ export default function AuthModal() {
     </div>
   );
 }
+
