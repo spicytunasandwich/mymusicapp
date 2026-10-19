@@ -3,6 +3,7 @@ import { Search as SearchIcon, X, Play, Pause, Heart, Sparkles } from 'lucide-re
 import { api } from '../api/client';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackRowSkeleton, CardSkeleton } from '../components/Common/SkeletonLoader';
+import { StaggerContainer, StaggerItem, AnimatedLikeButton, SpringButton } from '../components/Common/Motion';
 
 const GENRES = [
   { name: 'Electronic & Dance', color: 'from-violet-600 to-indigo-800' },

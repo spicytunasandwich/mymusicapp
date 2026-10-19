@@ -5,6 +5,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
 import { CardSkeleton, QuickPlaySkeleton } from '../components/Common/SkeletonLoader';
 import EqualizerWave from '../components/Common/EqualizerWave';
+import { StaggerContainer, StaggerItem, SpringButton } from '../components/Common/Motion';
 
 export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlbum }) {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
@@ -50,49 +51,50 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
             <QuickPlaySkeleton count={6} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {quickItems.map((item) => {
               const isTrack = Boolean(item.artist_name || item.duration);
               const isItemPlaying = isTrack && currentTrack?.id === item.id && isPlaying;
 
               return (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    if (isTrack) {
-                      playTrack(item, data.recently_played.length ? data.recently_played : data.top_tracks);
-                    } else {
-                      onSelectPlaylist?.(item.id);
-                    }
-                  }}
-                  className="quick-play-card group h-16"
-                >
-                  <img
-                    src={item.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300'}
-                    alt={item.title}
-                    className="w-16 h-16 object-cover shrink-0 shadow-md"
-                  />
-                  <div className="flex-1 px-3.5 min-w-0">
-                    <p className={`text-xs font-bold truncate ${isItemPlaying ? 'text-purple-400' : 'text-white'}`}>
-                      {item.title}
-                    </p>
-                    {isTrack && (
-                      <p className="text-[10px] text-slate-400 truncate">{item.artist_name}</p>
-                    )}
-                  </div>
-                  <div className="pr-3">
-                    <div className="quick-play-btn w-9 h-9 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent">
-                      {isItemPlaying ? (
-                        <Pause size={15} className="fill-white" />
-                      ) : (
-                        <Play size={15} className="fill-white ml-0.5" />
+                <StaggerItem key={item.id}>
+                  <div
+                    onClick={() => {
+                      if (isTrack) {
+                        playTrack(item, data.recently_played.length ? data.recently_played : data.top_tracks);
+                      } else {
+                        onSelectPlaylist?.(item.id);
+                      }
+                    }}
+                    className="quick-play-card group h-16"
+                  >
+                    <img
+                      src={item.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300'}
+                      alt={item.title}
+                      className="w-16 h-16 object-cover shrink-0 shadow-md"
+                    />
+                    <div className="flex-1 px-3.5 min-w-0">
+                      <p className={`text-xs font-bold truncate ${isItemPlaying ? 'text-purple-400' : 'text-white'}`}>
+                        {item.title}
+                      </p>
+                      {isTrack && (
+                        <p className="text-[10px] text-slate-400 truncate">{item.artist_name}</p>
                       )}
                     </div>
+                    <div className="pr-3">
+                      <div className="quick-play-btn w-9 h-9 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent">
+                        {isItemPlaying ? (
+                          <Pause size={15} className="fill-white" />
+                        ) : (
+                          <Play size={15} className="fill-white ml-0.5" />
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
         )}
       </div>
 
@@ -110,31 +112,32 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
             <CardSkeleton count={5} />
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {data.featured_playlists.map((playlist) => (
-              <div
-                key={playlist.id}
-                onClick={() => onSelectPlaylist(playlist.id)}
-                className="spotify-card p-3.5 rounded-2xl cursor-pointer flex flex-col group"
-              >
-                {/* Artwork with floating play button */}
-                <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[#0D0E15] shadow-lg">
-                  <img
-                    src={playlist.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'}
-                    alt={playlist.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="play-btn absolute right-2.5 bottom-2.5 w-11 h-11 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-play">
-                    <Play size={18} className="fill-white ml-0.5" />
+              <StaggerItem key={playlist.id}>
+                <div
+                  onClick={() => onSelectPlaylist(playlist.id)}
+                  className="spotify-card p-3.5 rounded-2xl cursor-pointer flex flex-col group h-full"
+                >
+                  {/* Artwork with floating play button */}
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[#0D0E15] shadow-lg">
+                    <img
+                      src={playlist.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'}
+                      alt={playlist.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="play-btn absolute right-2.5 bottom-2.5 w-11 h-11 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-play">
+                      <Play size={18} className="fill-white ml-0.5" />
+                    </div>
                   </div>
+                  <h3 className="text-xs font-bold text-white truncate">{playlist.title}</h3>
+                  <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                    {playlist.description || `By @${playlist.owner_username}`}
+                  </p>
                 </div>
-                <h3 className="text-xs font-bold text-white truncate">{playlist.title}</h3>
-                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  {playlist.description || `By @${playlist.owner_username}`}
-                </p>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         )}
       </section>
 

@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Mic2, Heart, Music, Disc3, Clock } from 'lucide-react';
+import { X, Mic2, Disc3, Clock } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { api } from '../api/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatedLikeButton, SpringButton } from '../components/Common/Motion';
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -74,78 +76,87 @@ export default function NowPlayingView() {
     }
   }, [activeIndex]);
 
-  if (!isLyricsOpen || !currentTrack) return null;
-
-  const liked = isLiked(currentTrack.id);
+  const liked = isLiked(currentTrack?.id);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col animate-in fade-in duration-300 pb-20 select-none overflow-hidden">
-      {/* Immersive Blurred Album Art Backdrop */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-        <img
-          src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
-          alt=""
-          className="w-full h-full object-cover scale-150 blur-3xl opacity-35 filter brightness-75"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#08090E]/85 via-[#0B0C14]/90 to-[#08090E]/95" />
-      </div>
-
-      {/* Top Header Bar */}
-      <header className="h-16 px-6 md:px-10 flex items-center justify-between border-b border-white/[0.06] shrink-0">
-        <div className="flex items-center gap-2.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-purple-300 uppercase tracking-widest">
-          <Mic2 size={15} className="text-purple-400" />
-          <span>Synced Lyrics</span>
-        </div>
-
-        <button
-          onClick={toggleLyrics}
-          className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition"
-          title="Close (Esc)"
+    <AnimatePresence>
+      {isLyricsOpen && currentTrack && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-50 flex flex-col pb-20 select-none overflow-hidden"
         >
-          <X size={22} />
-        </button>
-      </header>
-
-      {/* Main Content: 2-Column Split */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 md:p-10 gap-8 lg:gap-12 max-w-7xl mx-auto w-full items-center">
-        {/* Left Column: Artwork Presentation & Metadata */}
-        <div className="w-full lg:w-5/12 flex flex-col items-center justify-center text-center shrink-0">
-          <div className="relative group">
-            {/* Ambient Backlight Glow */}
-            <div
-              className="absolute -inset-6 rounded-3xl opacity-40 blur-3xl transition-opacity duration-700 group-hover:opacity-60"
-              style={{
-                background: 'radial-gradient(circle, var(--audira-accent-glow) 0%, rgba(6,182,212,0.2) 100%)'
-              }}
+          {/* Immersive Blurred Album Art Backdrop */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+            <img
+              src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
+              alt=""
+              className="w-full h-full object-cover scale-150 blur-3xl opacity-35 filter brightness-75"
             />
-            <div className="relative w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-              <img
-                src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
-                alt={currentTrack.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-[#08090E]/85 via-[#0B0C14]/90 to-[#08090E]/95" />
           </div>
 
-          <div className="mt-8 flex items-center justify-between w-full max-w-xs md:max-w-sm">
-            <div className="text-left overflow-hidden min-w-0 pr-3">
-              <h2 className="text-xl sm:text-2xl font-black text-white truncate">{currentTrack.title}</h2>
-              <p className="text-sm font-semibold text-purple-300 truncate mt-0.5">
-                {currentTrack.artist_name || 'Audira Artist'}
-              </p>
-              {currentTrack.album_title && (
-                <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.album_title}</p>
-              )}
+          {/* Top Header Bar */}
+          <header className="h-16 px-6 md:px-10 flex items-center justify-between border-b border-white/[0.06] shrink-0">
+            <div className="flex items-center gap-2.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-purple-300 uppercase tracking-widest">
+              <Mic2 size={15} className="text-purple-400" />
+              <span>Synced Lyrics</span>
             </div>
 
-            <button
-              onClick={() => toggleLike(currentTrack.id)}
-              className="p-3 rounded-full bg-white/5 hover:bg-white/10 transition shrink-0"
-              title={liked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
+            <SpringButton
+              onClick={toggleLyrics}
+              className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition"
+              title="Close (Esc)"
             >
-              <Heart size={22} className={liked ? 'fill-purple-500 text-purple-500' : 'text-slate-400 hover:text-white'} />
-            </button>
-          </div>
+              <X size={22} />
+            </SpringButton>
+          </header>
+
+          {/* Main Content: 2-Column Split */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 md:p-10 gap-8 lg:gap-12 max-w-7xl mx-auto w-full items-center">
+            {/* Left Column: Shared-element Artwork Presentation & Metadata */}
+            <div className="w-full lg:w-5/12 flex flex-col items-center justify-center text-center shrink-0">
+              <div className="relative group">
+                {/* Ambient Backlight Glow */}
+                <div
+                  className="absolute -inset-6 rounded-3xl opacity-40 blur-3xl transition-opacity duration-700 group-hover:opacity-60"
+                  style={{
+                    background: 'radial-gradient(circle, var(--audira-accent-glow) 0%, rgba(6,182,212,0.2) 100%)'
+                  }}
+                />
+                <motion.div
+                  layoutId="active-track-art"
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  className="relative w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+                >
+                  <img
+                    src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              </div>
+
+              <div className="mt-8 flex items-center justify-between w-full max-w-xs md:max-w-sm">
+                <div className="text-left overflow-hidden min-w-0 pr-3">
+                  <h2 className="text-xl sm:text-2xl font-black text-white truncate">{currentTrack.title}</h2>
+                  <p className="text-sm font-semibold text-purple-300 truncate mt-0.5">
+                    {currentTrack.artist_name || 'Audira Artist'}
+                  </p>
+                  {currentTrack.album_title && (
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.album_title}</p>
+                  )}
+                </div>
+
+                <AnimatedLikeButton
+                  isLiked={liked}
+                  onToggle={() => toggleLike(currentTrack.id)}
+                  size={22}
+                  className="p-3 bg-white/5 hover:bg-white/10 shrink-0"
+                />
+              </div>
 
           {/* Time Scrubber info */}
           <div className="mt-4 flex items-center gap-2 text-xs font-mono text-slate-400">
@@ -211,6 +222,8 @@ export default function NowPlayingView() {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
+    )}
+  </AnimatePresence>
   );
 }

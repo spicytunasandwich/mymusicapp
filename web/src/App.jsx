@@ -12,6 +12,7 @@ import NowPlayingView from './views/NowPlayingView';
 import ProfileView from './views/ProfileView';
 import SettingsView from './views/SettingsView';
 import SpotifyImportView from './views/SpotifyImportView';
+import { PageTransition } from './components/Common/Motion';
 
 export default function App() {
   const [activeView, setActiveView] = useState('home');
@@ -39,55 +40,57 @@ export default function App() {
           onOpenProfile={handleOpenProfile}
           onOpenSettings={() => setActiveView('settings')}
         >
-          {activeView === 'home' && (
-            <HomeView
-              onSelectPlaylist={handleSelectPlaylist}
-              onSelectArtist={() => setActiveView('search')}
-              onSelectAlbum={() => setActiveView('search')}
-            />
-          )}
+          <PageTransition viewKey={activeView}>
+            {activeView === 'home' && (
+              <HomeView
+                onSelectPlaylist={handleSelectPlaylist}
+                onSelectArtist={() => setActiveView('search')}
+                onSelectAlbum={() => setActiveView('search')}
+              />
+            )}
 
-          {activeView === 'search' && (
-            <SearchView
-              onSelectPlaylist={handleSelectPlaylist}
-              onSelectArtist={() => {}}
-            />
-          )}
+            {activeView === 'search' && (
+              <SearchView
+                onSelectPlaylist={handleSelectPlaylist}
+                onSelectArtist={() => {}}
+              />
+            )}
 
-          {activeView === 'library' && (
-            <LibraryView
-              onSelectPlaylist={handleSelectPlaylist}
-              onSelectLiked={() => setActiveView('liked')}
-            />
-          )}
+            {activeView === 'library' && (
+              <LibraryView
+                onSelectPlaylist={handleSelectPlaylist}
+                onSelectLiked={() => setActiveView('liked')}
+              />
+            )}
 
-          {activeView === 'liked' && (
-            <LikedSongsView onBack={() => setActiveView('library')} />
-          )}
+            {activeView === 'liked' && (
+              <LikedSongsView onBack={() => setActiveView('library')} />
+            )}
 
-          {activeView === 'playlist' && (
-            <PlaylistView
-              playlistId={selectedPlaylistId}
-              onBack={() => setActiveView('library')}
-            />
-          )}
+            {activeView === 'playlist' && (
+              <PlaylistView
+                playlistId={selectedPlaylistId}
+                onBack={() => setActiveView('library')}
+              />
+            )}
 
-          {activeView === 'profile' && (
-            <ProfileView
-              username={selectedUsername}
-              onSelectPlaylist={handleSelectPlaylist}
-            />
-          )}
+            {activeView === 'profile' && (
+              <ProfileView
+                username={selectedUsername}
+                onSelectPlaylist={handleSelectPlaylist}
+              />
+            )}
 
-          {activeView === 'settings' && (
-            <SettingsView />
-          )}
+            {activeView === 'settings' && (
+              <SettingsView />
+            )}
 
-          {activeView === 'import' && (
-            <SpotifyImportView
-              onSelectPlaylist={handleSelectPlaylist}
-            />
-          )}
+            {activeView === 'import' && (
+              <SpotifyImportView
+                onSelectPlaylist={handleSelectPlaylist}
+              />
+            )}
+          </PageTransition>
         </Layout>
 
         {/* Full-Screen Synced Lyrics & Now Playing Overlay */}

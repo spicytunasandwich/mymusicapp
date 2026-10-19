@@ -6,6 +6,8 @@ import {
 import { usePlayer } from '../../context/PlayerContext';
 import { useAuth } from '../../context/AuthContext';
 import EqualizerWave from '../Common/EqualizerWave';
+import { SpringButton, AnimatedLikeButton } from '../Common/Motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -67,13 +69,19 @@ export default function PlayerBar() {
         {/* Left: Track Details & Like */}
         <div className="flex items-center gap-3 w-auto sm:w-1/4 sm:min-w-[190px] max-w-[50%] sm:max-w-none shrink-0">
           <div className="relative group">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden bg-audira-card border border-white/10 shadow-md shrink-0">
+            <motion.div
+              layoutId="active-track-art"
+              className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden bg-audira-card border border-white/10 shadow-md shrink-0 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleLyrics}
+            >
               <img
                 src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300'}
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"
               />
-            </div>
+            </motion.div>
           </div>
           <div className="overflow-hidden min-w-0">
             <div className="flex items-center gap-2">
@@ -86,20 +94,19 @@ export default function PlayerBar() {
               {currentTrack.artist_name || 'Audira Artist'}
             </p>
           </div>
-          <button
-            onClick={() => toggleLike(currentTrack.id)}
-            className="p-1.5 rounded-full hover:bg-white/5 text-slate-400 transition shrink-0"
-            title={liked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
-          >
-            <Heart size={18} className={liked ? 'fill-purple-500 text-purple-500' : 'hover:text-white'} />
-          </button>
+          <AnimatedLikeButton
+            isLiked={liked}
+            onToggle={() => toggleLike(currentTrack.id)}
+            size={18}
+            className="shrink-0"
+          />
         </div>
 
         {/* Center: Playback Controls & Scrubber */}
         <div className="flex flex-col items-center flex-1 max-w-xl">
           {/* Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-5 mb-1 sm:mb-1.5">
-            <button
+            <SpringButton
               onClick={toggleShuffle}
               className={`hidden sm:flex p-1.5 rounded-full transition ${
                 isShuffle ? 'text-purple-400 hover:text-purple-300' : 'text-slate-400 hover:text-white'
@@ -107,19 +114,21 @@ export default function PlayerBar() {
               title="Shuffle"
             >
               <Shuffle size={16} />
-            </button>
+            </SpringButton>
 
-            <button
+            <SpringButton
               onClick={prevTrack}
               className="p-1.5 rounded-full text-slate-300 hover:text-white transition"
               title="Previous"
             >
               <SkipBack size={18} className="sm:w-5 sm:h-5" />
-            </button>
+            </SpringButton>
 
-            <button
+            <SpringButton
               onClick={togglePlay}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white hover:scale-105 active:scale-95 text-black flex items-center justify-center transition shadow-lg shadow-purple-500/20"
+              scaleHover={1.08}
+              scaleTap={0.92}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center transition shadow-lg shadow-purple-500/20"
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? (
@@ -127,17 +136,17 @@ export default function PlayerBar() {
               ) : (
                 <Play size={18} className="fill-black ml-0.5 sm:w-5 sm:h-5" />
               )}
-            </button>
+            </SpringButton>
 
-            <button
+            <SpringButton
               onClick={nextTrack}
               className="p-1.5 rounded-full text-slate-300 hover:text-white transition"
               title="Next"
             >
               <SkipForward size={18} className="sm:w-5 sm:h-5" />
-            </button>
+            </SpringButton>
 
-            <button
+            <SpringButton
               onClick={cycleRepeat}
               className={`hidden sm:flex p-1.5 rounded-full relative transition ${
                 repeatMode !== 'off' ? 'text-purple-400 hover:text-purple-300' : 'text-slate-400 hover:text-white'
@@ -148,7 +157,7 @@ export default function PlayerBar() {
               {repeatMode !== 'off' && (
                 <span className="w-1.5 h-1.5 bg-purple-400 rounded-full absolute bottom-0 left-1/2 -translate-x-1/2" />
               )}
-            </button>
+            </SpringButton>
           </div>
 
           {/* Desktop Time Progress Scrubber */}
