@@ -31,20 +31,46 @@ export function AuthProvider({ children }) {
 
   const login = async (identifier, password) => {
     const data = await api.post('/auth/login', { identifier, password });
-    localStorage.setItem('audira_token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    setAuthModalOpen(false);
+    if (data.token) {
+      localStorage.setItem('audira_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setAuthModalOpen(false);
+    }
     return data;
   };
 
   const signup = async ({ email, password, username, display_name }) => {
     const data = await api.post('/auth/signup', { email, password, username, display_name });
-    localStorage.setItem('audira_token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    setAuthModalOpen(false);
+    // User must verify 6-digit code before session token is granted
     return data;
+  };
+
+  const verifyCode = async (email, code) => {
+    const data = await api.post('/auth/verify-code', { email, code });
+    if (data.token) {
+      localStorage.setItem('audira_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setAuthModalOpen(false);
+    }
+    return data;
+  };
+
+  const resendCode = async (email, type = 'verification') => {
+    return await api.post('/auth/resend-code', { email, type });
+  };
+
+  const forgotPassword = async (email) => {
+    return await api.post('/auth/forgot-password', { email });
+  };
+
+  const resetPassword = async (email, code, newPassword) => {
+    return await api.post('/auth/reset-password', {
+      email,
+      code,
+      new_password: newPassword
+    });
   };
 
   const googleLogin = async (idToken) => {
@@ -83,6 +109,10 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       login,
       signup,
+      verifyCode,
+      resendCode,
+      forgotPassword,
+      resetPassword,
       googleLogin,
       logout,
       updateUser,

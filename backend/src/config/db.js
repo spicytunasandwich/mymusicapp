@@ -10,7 +10,29 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle PostgreSQL client', err);
 });
 
+// Auto-migrate 6-digit verification and reset code columns
+async function initDbColumns() {
+  try {
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(6);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_attempts INT DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_last_sent_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(6);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_attempts INT DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_last_sent_at TIMESTAMPTZ;
+    `);
+    console.log('✅ DB auth columns verified (6-digit verification & reset codes).');
+  } catch (err) {
+    console.warn('DB column initialization note:', err.message);
+  }
+}
+
+initDbColumns();
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
   pool
 };
+

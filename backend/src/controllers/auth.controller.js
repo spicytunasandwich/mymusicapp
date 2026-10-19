@@ -3,7 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { pool } = require('../config/db');
-const { sendEmail } = require('../utils/mailer');
+const {
+  sendEmail,
+  getVerificationEmailHtml,
+  getPasswordResetEmailHtml
+} = require('../utils/mailer');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -15,9 +19,13 @@ function generateJwt(user) {
   );
 }
 
+function generate6DigitCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 const ACCENT_COLORS = ['#7C3AED', '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#06B6D4', '#8B5CF6'];
 
-// 1. SIGNUP
+// 1. SIGNUP (Creates unverified account and sends 6-digit code, NO ACCESS until verified)
 exports.signup = async (req, res) => {
   try {
     const { email, password, username, display_name } = req.body;
@@ -30,46 +38,92 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
+    const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
     if (cleanUsername.length < 3 || cleanUsername.length > 30) {
       return res.status(400).json({ error: 'Username must be 3-30 alphanumeric characters.' });
     }
 
     // Check existing email or username
     const existing = await pool.query(
-      'SELECT id, email, username FROM users WHERE email = $1 OR username = $2',
-      [email.toLowerCase().trim(), cleanUsername]
+      'SELECT id, email, username, is_verified, verification_last_sent_at FROM users WHERE email = $1 OR username = $2',
+      [cleanEmail, cleanUsername]
     );
 
     if (existing.rows.length > 0) {
       const match = existing.rows[0];
-      if (match.email.toLowerCase() === email.toLowerCase().trim()) {
-        return res.status(409).json({ error: 'An account with this email already exists.' });
+      // If user exists and is already verified, block signup
+      if (match.is_verified) {
+        if (match.email.toLowerCase() === cleanEmail) {
+          return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
+        }
+        return res.status(409).json({ error: 'Username is already taken.' });
       }
+
+      // If user exists but is NOT verified yet, update password and send a fresh code (with cooldown)
+      if (match.email.toLowerCase() === cleanEmail) {
+        const lastSent = match.verification_last_sent_at ? new Date(match.verification_last_sent_at).getTime() : 0;
+        const cooldownRemaining = Math.max(0, Math.ceil((60000 - (Date.now() - lastSent)) / 1000));
+
+        if (cooldownRemaining > 0) {
+          return res.status(429).json({
+            error: `A verification code was recently sent. Please wait ${cooldownRemaining}s before requesting again.`,
+            cooldown: cooldownRemaining,
+            requires_verification: true,
+            email: cleanEmail
+          });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const code = generate6DigitCode();
+        await pool.query(
+          `UPDATE users
+           SET password_hash = $1, username = $2, display_name = $3,
+               verification_code = $4, verification_code_expires_at = NOW() + INTERVAL '10 minutes',
+               verification_attempts = 0, verification_last_sent_at = NOW()
+           WHERE id = $5`,
+          [passwordHash, cleanUsername, display_name?.trim() || cleanUsername, code, match.id]
+        );
+
+        sendEmail({
+          to: cleanEmail,
+          subject: `${code} is your Audira verification code`,
+          html: getVerificationEmailHtml(display_name || cleanUsername, code),
+          text: `Your Audira verification code is: ${code} (expires in 10 minutes, max 5 attempts).`
+        }).catch(err => console.error('Verification email error:', err));
+
+        return res.status(200).json({
+          message: 'Account pending verification. A 6-digit code has been sent to your email.',
+          email: cleanEmail,
+          requires_verification: true,
+          cooldown: 60
+        });
+      }
+
       return res.status(409).json({ error: 'Username is already taken.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const code = generate6DigitCode();
     const randomAccent = ACCENT_COLORS[Math.floor(Math.random() * ACCENT_COLORS.length)];
     const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}&backgroundColor=12131f`;
 
     const userResult = await pool.query(
       `INSERT INTO users (
         email, password_hash, username, display_name, avatar_url,
-        accent_color, is_verified, verification_token, verification_token_expires_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)
-      RETURNING id, email, username, display_name, bio, avatar_url, banner_url, accent_color, is_verified, created_at`,
+        accent_color, is_verified, verification_code, verification_code_expires_at,
+        verification_attempts, verification_last_sent_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, false, $7, NOW() + INTERVAL '10 minutes', 0, NOW())
+      RETURNING id, email, username, display_name, avatar_url, accent_color, is_verified, created_at`,
       [
-        email.toLowerCase().trim(),
+        cleanEmail,
         passwordHash,
         cleanUsername,
         display_name?.trim() || cleanUsername,
         defaultAvatar,
         randomAccent,
-        verificationToken,
-        verificationExpires
+        code
       ]
     );
 
@@ -82,32 +136,20 @@ exports.signup = async (req, res) => {
       [newUser.id, randomAccent]
     );
 
-    // Send verification email
-    const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    // Send 6-digit verification email
     sendEmail({
       to: newUser.email,
-      subject: 'Verify your Audira Music account',
-      html: `
-        <div style="font-family: sans-serif; background: #0D0E15; color: #F8FAFC; padding: 40px; border-radius: 12px; max-width: 520px; margin: auto;">
-          <h1 style="color: #8B5CF6; margin-bottom: 8px;">Welcome to Audira 🎵</h1>
-          <p style="color: #94A3B8; font-size: 16px;">Hi <b>${newUser.display_name}</b>, your unlimited music journey begins now.</p>
-          <p style="margin: 24px 0;">
-            <a href="${verifyUrl}" style="background: linear-gradient(135deg, #7C3AED, #06B6D4); color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Verify Email Address
-            </a>
-          </p>
-          <p style="color: #64748B; font-size: 13px;">If you didn't create an account, you can safely ignore this email.</p>
-        </div>
-      `,
-      text: `Welcome to Audira! Verify your email here: ${verifyUrl}`
-    }).catch(err => console.error('Failed to send verification email:', err));
+      subject: `${code} is your Audira verification code`,
+      html: getVerificationEmailHtml(newUser.display_name, code),
+      text: `Your Audira verification code is: ${code} (expires in 10 minutes, max 5 attempts).`
+    }).catch(err => console.error('Verification email error:', err));
 
-    const token = generateJwt(newUser);
-
+    // Notice: NO JWT TOKEN issued until verified!
     res.status(201).json({
-      message: 'Account created successfully. Verification email sent.',
-      token,
-      user: newUser
+      message: 'Account created. Please enter the 6-digit verification code sent to your email.',
+      email: newUser.email,
+      requires_verification: true,
+      cooldown: 60
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -115,82 +157,190 @@ exports.signup = async (req, res) => {
   }
 };
 
-// 2. VERIFY EMAIL
-exports.verifyEmail = async (req, res) => {
+// 2. VERIFY 6-DIGIT CODE
+exports.verifyCode = async (req, res) => {
   try {
-    const { token } = req.body;
-    if (!token) {
-      return res.status(400).json({ error: 'Verification token is required.' });
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
     }
 
-    const result = await pool.query(
-      `UPDATE users
-       SET is_verified = true, verification_token = NULL, verification_token_expires_at = NULL, updated_at = NOW()
-       WHERE verification_token = $1 AND verification_token_expires_at > NOW()
-       RETURNING id, email, username, display_name, is_verified`,
-      [token]
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.toString().trim();
+
+    const userRes = await pool.query(
+      `SELECT u.*, s.theme_accent, s.theme_mode, s.home_widget_order
+       FROM users u
+       LEFT JOIN user_settings s ON s.user_id = u.id
+       WHERE LOWER(u.email) = LOWER($1)`,
+      [cleanEmail]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid or expired verification token.' });
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found with this email.' });
     }
 
-    res.json({ message: 'Email verified successfully!', user: result.rows[0] });
+    const user = userRes.rows[0];
+
+    if (user.is_verified) {
+      const token = generateJwt(user);
+      delete user.password_hash;
+      delete user.verification_code;
+      delete user.reset_code;
+      return res.json({ message: 'Account is already verified.', token, user });
+    }
+
+    // Check max attempts (limit to 5)
+    if (user.verification_attempts >= 5) {
+      return res.status(400).json({
+        error: 'Maximum verification attempts exceeded. Please click "Resend Code" to receive a new code.'
+      });
+    }
+
+    // Check expiration (10 min)
+    if (!user.verification_code_expires_at || new Date(user.verification_code_expires_at) < new Date()) {
+      return res.status(400).json({
+        error: 'Verification code has expired. Please request a new code.'
+      });
+    }
+
+    // Compare code
+    if (user.verification_code !== cleanCode) {
+      const newAttempts = (user.verification_attempts || 0) + 1;
+      await pool.query(
+        'UPDATE users SET verification_attempts = $1 WHERE id = $2',
+        [newAttempts, user.id]
+      );
+      const remaining = Math.max(0, 5 - newAttempts);
+      return res.status(400).json({
+        error: `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+      });
+    }
+
+    // Valid code: mark verified and clear code
+    const updatedRes = await pool.query(
+      `UPDATE users
+       SET is_verified = true, verification_code = NULL, verification_code_expires_at = NULL,
+           verification_attempts = 0, updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, email, username, display_name, bio, avatar_url, banner_url, accent_color, is_verified, created_at`,
+      [user.id]
+    );
+
+    const verifiedUser = updatedRes.rows[0];
+    const token = generateJwt(verifiedUser);
+
+    res.json({
+      message: 'Email verified successfully! Welcome to Audira.',
+      token,
+      user: verifiedUser
+    });
   } catch (error) {
-    console.error('Verify email error:', error);
-    res.status(500).json({ error: 'Failed to verify email.' });
+    console.error('Verify code error:', error);
+    res.status(500).json({ error: 'Failed to verify code.' });
   }
 };
 
-// 3. RESEND VERIFICATION EMAIL
-exports.resendVerification = async (req, res) => {
+// 3. RESEND 6-DIGIT CODE (Verification or Reset with 60s cooldown)
+exports.resendCode = async (req, res) => {
   try {
-    const email = req.user ? req.user.email : req.body.email;
+    const { email, type = 'verification' } = req.body;
     if (!email) {
-      return res.status(400).json({ error: 'Email is required.' });
+      return res.status(400).json({ error: 'Email address is required.' });
     }
 
-    const userRes = await pool.query(
-      'SELECT id, email, display_name, is_verified FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
-    );
+    const cleanEmail = email.toLowerCase().trim();
+    const userRes = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
 
     if (userRes.rows.length === 0) {
       return res.status(404).json({ error: 'No account found with this email.' });
     }
 
     const user = userRes.rows[0];
-    if (user.is_verified) {
-      return res.status(400).json({ error: 'This account email is already verified.' });
+
+    if (type === 'verification') {
+      if (user.is_verified) {
+        return res.status(400).json({ error: 'This account email is already verified. Please log in.' });
+      }
+
+      // 60-second cooldown check
+      const lastSent = user.verification_last_sent_at ? new Date(user.verification_last_sent_at).getTime() : 0;
+      const elapsed = Date.now() - lastSent;
+      if (elapsed < 60000) {
+        const remaining = Math.ceil((60000 - elapsed) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${remaining}s before requesting another code.`,
+          cooldown: remaining
+        });
+      }
+
+      const code = generate6DigitCode();
+      await pool.query(
+        `UPDATE users
+         SET verification_code = $1, verification_code_expires_at = NOW() + INTERVAL '10 minutes',
+             verification_attempts = 0, verification_last_sent_at = NOW()
+         WHERE id = $2`,
+        [code, user.id]
+      );
+
+      sendEmail({
+        to: user.email,
+        subject: `${code} is your Audira verification code`,
+        html: getVerificationEmailHtml(user.display_name, code),
+        text: `Your Audira verification code is: ${code} (expires in 10 minutes, max 5 attempts).`
+      }).catch(err => console.error('Resend verification email error:', err));
+
+      return res.json({
+        message: 'A fresh 6-digit verification code has been sent to your email.',
+        cooldown: 60
+      });
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (type === 'reset') {
+      // 60-second cooldown check for password reset
+      const lastSent = user.reset_last_sent_at ? new Date(user.reset_last_sent_at).getTime() : 0;
+      const elapsed = Date.now() - lastSent;
+      if (elapsed < 60000) {
+        const remaining = Math.ceil((60000 - elapsed) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${remaining}s before requesting another reset code.`,
+          cooldown: remaining
+        });
+      }
 
-    await pool.query(
-      `UPDATE users SET verification_token = $1, verification_token_expires_at = $2 WHERE id = $3`,
-      [verificationToken, verificationExpires, user.id]
-    );
+      const code = generate6DigitCode();
+      await pool.query(
+        `UPDATE users
+         SET reset_code = $1, reset_code_expires_at = NOW() + INTERVAL '10 minutes',
+             reset_attempts = 0, reset_last_sent_at = NOW()
+         WHERE id = $2`,
+        [code, user.id]
+      );
 
-    const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
-    await sendEmail({
-      to: user.email,
-      subject: 'Verify your Audira Music account',
-      html: `<p>Click here to verify your Audira account: <a href="${verifyUrl}">${verifyUrl}</a></p>`,
-      text: `Verify your email: ${verifyUrl}`
-    });
+      sendEmail({
+        to: user.email,
+        subject: `${code} is your Audira password reset code`,
+        html: getPasswordResetEmailHtml(user.display_name, code),
+        text: `Your Audira password reset code is: ${code} (expires in 10 minutes, max 5 attempts).`
+      }).catch(err => console.error('Resend reset email error:', err));
 
-    res.json({ message: 'Verification email resent successfully.' });
+      return res.json({
+        message: 'A fresh 6-digit password reset code has been sent to your email.',
+        cooldown: 60
+      });
+    }
+
+    res.status(400).json({ error: 'Invalid code type specified.' });
   } catch (error) {
-    console.error('Resend verification error:', error);
-    res.status(500).json({ error: 'Failed to resend verification email.' });
+    console.error('Resend code error:', error);
+    res.status(500).json({ error: 'Failed to resend code.' });
   }
 };
 
-// 4. LOGIN
+// 4. LOGIN (Blocks access if unverified, sends code with cooldown)
 exports.login = async (req, res) => {
   try {
-    const { identifier, password } = req.body; // email or username
+    const { identifier, password } = req.body;
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Email/username and password are required.' });
     }
@@ -204,23 +354,59 @@ exports.login = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     const user = result.rows[0];
     if (!user.password_hash) {
-      return res.status(400).json({ error: 'This account was registered via Google. Please log in with Google.' });
+      return res.status(400).json({ error: 'This account was created with Google. Please log in with Google.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // REQUIRE VERIFICATION: No access until verified!
+    if (!user.is_verified) {
+      const lastSent = user.verification_last_sent_at ? new Date(user.verification_last_sent_at).getTime() : 0;
+      const elapsed = Date.now() - lastSent;
+      let cooldown = 0;
+
+      // If last sent > 60s ago or expired, send a fresh code
+      if (elapsed >= 60000 || !user.verification_code || (user.verification_code_expires_at && new Date(user.verification_code_expires_at) < new Date())) {
+        const code = generate6DigitCode();
+        await pool.query(
+          `UPDATE users
+           SET verification_code = $1, verification_code_expires_at = NOW() + INTERVAL '10 minutes',
+               verification_attempts = 0, verification_last_sent_at = NOW()
+           WHERE id = $2`,
+          [code, user.id]
+        );
+
+        sendEmail({
+          to: user.email,
+          subject: `${code} is your Audira verification code`,
+          html: getVerificationEmailHtml(user.display_name, code),
+          text: `Your Audira verification code is: ${code} (expires in 10 minutes).`
+        }).catch(err => console.error('Verification email error:', err));
+        cooldown = 60;
+      } else {
+        cooldown = Math.ceil((60000 - elapsed) / 1000);
+      }
+
+      return res.status(403).json({
+        error: 'Your email address is not verified yet. Please enter the 6-digit code sent to your email.',
+        requires_verification: true,
+        email: user.email,
+        cooldown
+      });
     }
 
     const token = generateJwt(user);
     delete user.password_hash;
-    delete user.verification_token;
-    delete user.reset_token;
+    delete user.verification_code;
+    delete user.reset_code;
 
     res.json({
       message: 'Login successful',
@@ -249,7 +435,6 @@ exports.googleLogin = async (req, res) => {
       });
       payload = ticket.getPayload();
     } else {
-      // Decode unverified token payload if GOOGLE_CLIENT_ID not yet set (local dev stub)
       const parts = idToken.split('.');
       if (parts.length === 3) {
         payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
@@ -260,10 +445,9 @@ exports.googleLogin = async (req, res) => {
 
     const { sub: googleId, email, name, picture } = payload;
     if (!email) {
-      return res.status(400).json({ error: 'Google token does not contain an email.' });
+      return res.status(400).json({ error: 'Google account does not have an email address.' });
     }
 
-    // Check if user exists by google_id or email
     let userRes = await pool.query(
       `SELECT u.*, s.theme_accent, s.theme_mode, s.home_widget_order
        FROM users u
@@ -275,14 +459,12 @@ exports.googleLogin = async (req, res) => {
     let user;
     if (userRes.rows.length > 0) {
       user = userRes.rows[0];
-      // If found by email but not linked to google_id, link it now
-      if (!user.google_id) {
+      if (!user.google_id || !user.is_verified) {
         await pool.query('UPDATE users SET google_id = $1, is_verified = true WHERE id = $2', [googleId, user.id]);
         user.google_id = googleId;
         user.is_verified = true;
       }
     } else {
-      // Create new user from Google profile
       const baseUsername = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase();
       const uniqueUsername = `${baseUsername.slice(0, 20)}_${crypto.randomBytes(3).toString('hex')}`;
       const randomAccent = ACCENT_COLORS[Math.floor(Math.random() * ACCENT_COLORS.length)];
@@ -304,8 +486,8 @@ exports.googleLogin = async (req, res) => {
 
     const token = generateJwt(user);
     delete user.password_hash;
-    delete user.verification_token;
-    delete user.reset_token;
+    delete user.verification_code;
+    delete user.reset_code;
 
     res.json({
       message: 'Google login successful',
@@ -318,81 +500,128 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-// 6. FORGOT PASSWORD
+// 6. FORGOT PASSWORD (Sends 6-digit reset code with 10 min expiry & 60s cooldown)
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ error: 'Email is required.' });
+      return res.status(400).json({ error: 'Email address is required.' });
     }
 
-    const result = await pool.query('SELECT id, email, display_name FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
+    const cleanEmail = email.toLowerCase().trim();
+    const result = await pool.query(
+      'SELECT id, email, display_name, reset_last_sent_at FROM users WHERE LOWER(email) = LOWER($1)',
+      [cleanEmail]
+    );
+
     if (result.rows.length === 0) {
-      // Don't disclose account existence for security
-      return res.json({ message: 'If an account exists with that email, a password reset link has been sent.' });
+      // Don't leak user existence
+      return res.json({
+        message: 'If an account exists with this email, a 6-digit reset code has been sent.',
+        email: cleanEmail,
+        requires_reset_code: true,
+        cooldown: 60
+      });
     }
 
     const user = result.rows[0];
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const lastSent = user.reset_last_sent_at ? new Date(user.reset_last_sent_at).getTime() : 0;
+    const elapsed = Date.now() - lastSent;
 
+    if (elapsed < 60000) {
+      const remaining = Math.ceil((60000 - elapsed) / 1000);
+      return res.status(429).json({
+        error: `Please wait ${remaining}s before requesting another reset code.`,
+        cooldown: remaining,
+        email: cleanEmail,
+        requires_reset_code: true
+      });
+    }
+
+    const code = generate6DigitCode();
     await pool.query(
-      'UPDATE users SET reset_token = $1, reset_token_expires_at = $2 WHERE id = $3',
-      [resetToken, resetExpires, user.id]
+      `UPDATE users
+       SET reset_code = $1, reset_code_expires_at = NOW() + INTERVAL '10 minutes',
+           reset_attempts = 0, reset_last_sent_at = NOW()
+       WHERE id = $2`,
+      [code, user.id]
     );
 
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     sendEmail({
       to: user.email,
-      subject: 'Reset your Audira Music password',
-      html: `
-        <div style="font-family: sans-serif; background: #0D0E15; color: #F8FAFC; padding: 40px; border-radius: 12px; max-width: 520px; margin: auto;">
-          <h2 style="color: #8B5CF6;">Password Reset Request</h2>
-          <p>Hi ${user.display_name}, you requested a password reset for your Audira account.</p>
-          <p style="margin: 24px 0;">
-            <a href="${resetUrl}" style="background: linear-gradient(135deg, #7C3AED, #06B6D4); color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Reset Password
-            </a>
-          </p>
-          <p style="color: #64748B; font-size: 13px;">This link is valid for 1 hour. If you didn't request this, ignore this email.</p>
-        </div>
-      `,
-      text: `Reset your Audira password: ${resetUrl}`
-    }).catch(err => console.error('Failed to send reset email:', err));
+      subject: `${code} is your Audira password reset code`,
+      html: getPasswordResetEmailHtml(user.display_name, code),
+      text: `Your Audira password reset code is: ${code} (expires in 10 minutes, max 5 attempts).`
+    }).catch(err => console.error('Password reset email error:', err));
 
-    res.json({ message: 'If an account exists with that email, a password reset link has been sent.' });
+    res.json({
+      message: 'A 6-digit password reset code has been sent to your email.',
+      email: user.email,
+      requires_reset_code: true,
+      cooldown: 60
+    });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Failed to process password reset request.' });
   }
 };
 
-// 7. RESET PASSWORD
+// 7. RESET PASSWORD (Validates 6-digit code, max 5 attempts, updates password)
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, new_password } = req.body;
-    if (!token || !new_password) {
-      return res.status(400).json({ error: 'Token and new password are required.' });
+    const { email, code, new_password } = req.body;
+    if (!email || !code || !new_password) {
+      return res.status(400).json({ error: 'Email, 6-digit code, and new password are required.' });
     }
 
     if (new_password.length < 6) {
       return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
     }
 
-    const passwordHash = await bcrypt.hash(new_password, 10);
-    const result = await pool.query(
-      `UPDATE users
-       SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW()
-       WHERE reset_token = $2 AND reset_token_expires_at > NOW()
-       RETURNING id, email, username`,
-      [passwordHash, token]
-    );
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.toString().trim();
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+    const userRes = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+    if (userRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid password reset request.' });
     }
 
-    res.json({ message: 'Password has been reset successfully. You can now log in.' });
+    const user = userRes.rows[0];
+
+    // Check attempts limit (5)
+    if (user.reset_attempts >= 5) {
+      return res.status(400).json({
+        error: 'Maximum reset attempts exceeded. Please request a fresh reset code.'
+      });
+    }
+
+    // Check expiration (10 min)
+    if (!user.reset_code_expires_at || new Date(user.reset_code_expires_at) < new Date()) {
+      return res.status(400).json({
+        error: 'Password reset code has expired (10 minute limit). Please request a new code.'
+      });
+    }
+
+    // Compare code
+    if (user.reset_code !== cleanCode) {
+      const newAttempts = (user.reset_attempts || 0) + 1;
+      await pool.query('UPDATE users SET reset_attempts = $1 WHERE id = $2', [newAttempts, user.id]);
+      const remaining = Math.max(0, 5 - newAttempts);
+      return res.status(400).json({
+        error: `Invalid reset code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(new_password, 10);
+    await pool.query(
+      `UPDATE users
+       SET password_hash = $1, reset_code = NULL, reset_code_expires_at = NULL,
+           reset_attempts = 0, is_verified = true, updated_at = NOW()
+       WHERE id = $2`,
+      [passwordHash, user.id]
+    );
+
+    res.json({ message: 'Password has been reset successfully! You can now log in.' });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password.' });
