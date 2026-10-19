@@ -34,7 +34,10 @@ export default function Layout({
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden bg-audira-bg min-w-0">
+        <div
+          className="flex-1 flex flex-col overflow-hidden min-w-0 transition-colors duration-300"
+          style={{ background: 'var(--audira-bg-gradient)' }}
+        >
           <TopBar
             onOpenProfile={onOpenProfile}
             onOpenSettings={onOpenSettings}

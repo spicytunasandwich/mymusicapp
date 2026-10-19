@@ -10,6 +10,23 @@ export function AuthProvider({ children }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState('login'); // 'login' | 'signup'
 
+  const applyUserTheme = (userData) => {
+    if (!userData) return;
+    if (userData.theme_accent) {
+      document.documentElement.style.setProperty('--audira-accent', userData.theme_accent);
+      document.documentElement.style.setProperty('--audira-accent-light', userData.theme_accent);
+      document.documentElement.style.setProperty('--audira-accent-glow', `${userData.theme_accent}59`);
+    }
+    if (userData.gradient_top && userData.gradient_bottom) {
+      document.documentElement.style.setProperty('--audira-gradient-top', userData.gradient_top);
+      document.documentElement.style.setProperty('--audira-gradient-bottom', userData.gradient_bottom);
+      document.documentElement.style.setProperty(
+        '--audira-bg-gradient',
+        `linear-gradient(180deg, ${userData.gradient_top} 0%, ${userData.gradient_bottom} 100%)`
+      );
+    }
+  };
+
   useEffect(() => {
     async function loadUser() {
       if (!token) {
@@ -19,6 +36,7 @@ export function AuthProvider({ children }) {
       try {
         const data = await api.get('/auth/me');
         setUser(data.user);
+        applyUserTheme(data.user);
       } catch (err) {
         console.warn('Session expired or invalid token:', err.message);
         logout();
@@ -35,6 +53,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('audira_token', data.token);
       setToken(data.token);
       setUser(data.user);
+      applyUserTheme(data.user);
       setAuthModalOpen(false);
     }
     return data;
@@ -52,6 +71,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('audira_token', data.token);
       setToken(data.token);
       setUser(data.user);
+      applyUserTheme(data.user);
       setAuthModalOpen(false);
     }
     return data;
@@ -78,6 +98,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('audira_token', data.token);
     setToken(data.token);
     setUser(data.user);
+    applyUserTheme(data.user);
     setAuthModalOpen(false);
     return data;
   };

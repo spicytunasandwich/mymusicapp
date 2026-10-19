@@ -91,7 +91,7 @@ exports.getSettings = async (req, res) => {
     const userId = req.user.id;
 
     const result = await pool.query(
-      `SELECT theme_accent, theme_mode, home_widget_order, audio_quality
+      `SELECT theme_accent, gradient_top, gradient_bottom, theme_mode, home_widget_order, audio_quality
        FROM user_settings
        WHERE user_id = $1`,
       [userId]
@@ -102,6 +102,8 @@ exports.getSettings = async (req, res) => {
       return res.json({
         settings: {
           theme_accent: '#8B5CF6',
+          gradient_top: '#1A102E',
+          gradient_bottom: '#08090E',
           theme_mode: 'dark',
           home_widget_order: ['recently_played', 'featured_playlists', 'top_mixes', 'recommended_artists', 'new_releases'],
           audio_quality: 'high'
@@ -116,25 +118,29 @@ exports.getSettings = async (req, res) => {
   }
 };
 
-// 4. UPDATE USER SETTINGS (Custom colors, widget reordering, mode)
+// 4. UPDATE USER SETTINGS (Custom colors, gradient stops, widget reordering, mode)
 exports.updateSettings = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { theme_accent, theme_mode, home_widget_order, audio_quality } = req.body;
+    const { theme_accent, gradient_top, gradient_bottom, theme_mode, home_widget_order, audio_quality } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO user_settings (user_id, theme_accent, theme_mode, home_widget_order, audio_quality)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO user_settings (user_id, theme_accent, gradient_top, gradient_bottom, theme_mode, home_widget_order, audio_quality)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (user_id) DO UPDATE SET
          theme_accent = COALESCE($2, user_settings.theme_accent),
-         theme_mode = COALESCE($3, user_settings.theme_mode),
-         home_widget_order = COALESCE($4, user_settings.home_widget_order),
-         audio_quality = COALESCE($5, user_settings.audio_quality),
+         gradient_top = COALESCE($3, user_settings.gradient_top),
+         gradient_bottom = COALESCE($4, user_settings.gradient_bottom),
+         theme_mode = COALESCE($5, user_settings.theme_mode),
+         home_widget_order = COALESCE($6, user_settings.home_widget_order),
+         audio_quality = COALESCE($7, user_settings.audio_quality),
          updated_at = NOW()
-       RETURNING theme_accent, theme_mode, home_widget_order, audio_quality`,
+       RETURNING theme_accent, gradient_top, gradient_bottom, theme_mode, home_widget_order, audio_quality`,
       [
         userId,
         theme_accent,
+        gradient_top,
+        gradient_bottom,
         theme_mode,
         home_widget_order ? JSON.stringify(home_widget_order) : null,
         audio_quality

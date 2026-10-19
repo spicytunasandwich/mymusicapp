@@ -637,7 +637,7 @@ exports.getMe = async (req, res) => {
     const result = await pool.query(
       `SELECT u.id, u.email, u.username, u.display_name, u.bio, u.avatar_url,
               u.banner_url, u.accent_color, u.is_verified, u.created_at,
-              s.theme_accent, s.theme_mode, s.home_widget_order, s.audio_quality
+              s.theme_accent, s.gradient_top, s.gradient_bottom, s.theme_mode, s.home_widget_order, s.audio_quality
        FROM users u
        LEFT JOIN user_settings s ON s.user_id = u.id
        WHERE u.id = $1`,

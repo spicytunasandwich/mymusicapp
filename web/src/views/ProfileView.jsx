@@ -7,6 +7,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/Common/ImageCropModal';
 import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
+import ColorPicker from '../components/Common/ColorPicker';
 
 const ACCENTS = [
   '#8B5CF6', '#7C3AED', '#3B82F6', '#06B6D4',
@@ -261,20 +262,11 @@ export default function ProfileView({ username, onSelectPlaylist }) {
               </div>
 
               <div>
-                <label className="font-bold text-slate-400 block mb-1.5">Profile Accent Color</label>
-                <div className="flex items-center gap-2">
-                  {ACCENTS.map(hex => (
-                    <button
-                      key={hex}
-                      type="button"
-                      onClick={() => setAccentColor(hex)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center transition shadow-md hover:scale-110"
-                      style={{ backgroundColor: hex }}
-                    >
-                      {accentColor === hex && <Check size={14} className="text-white" />}
-                    </button>
-                  ))}
-                </div>
+                <ColorPicker
+                  color={accentColor}
+                  onChange={setAccentColor}
+                  label="Profile Accent Color"
+                />
               </div>
 
               {uploadError && (

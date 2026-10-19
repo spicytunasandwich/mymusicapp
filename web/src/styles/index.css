@@ -6,6 +6,9 @@
   --audira-accent: #8B5CF6;
   --audira-accent-light: #A78BFA;
   --audira-accent-glow: rgba(139, 92, 246, 0.35);
+  --audira-gradient-top: #1A102E;
+  --audira-gradient-bottom: #08090E;
+  --audira-bg-gradient: linear-gradient(180deg, var(--audira-gradient-top) 0%, var(--audira-gradient-bottom) 100%);
   --primary-accent: var(--audira-accent);
   --bg-main: #08090E;
   --bg-sidebar: #06070B;
