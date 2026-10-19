@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Search, Library, PlusSquare, FolderPlus, DownloadCloud, Music2, Folder } from 'lucide-react';
+import {
+  Home, Search, Library, PlusSquare, DownloadCloud,
+  Music2, ChevronLeft, ChevronRight, Heart, X, Sparkles, Folder
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 
-export default function Sidebar({ activeView, setActiveView, onOpenImport, onSelectPlaylist }) {
+export default function Sidebar({
+  activeView,
+  setActiveView,
+  onOpenImport,
+  onSelectPlaylist,
+  isCollapsed = false,
+  toggleCollapse,
+  isMobileOpen = false,
+  onCloseMobile
+}) {
   const { user, isAuthenticated, openAuth } = useAuth();
   const [libraryData, setLibraryData] = useState({ folders: [], playlists: [], liked_songs_count: 0 });
 
@@ -29,149 +41,249 @@ export default function Sidebar({ activeView, setActiveView, onOpenImport, onSel
         playlists: [res.playlist, ...prev.playlists]
       }));
       onSelectPlaylist?.(res.playlist.id);
+      if (isMobileOpen && onCloseMobile) onCloseMobile();
     } catch (err) {
       alert('Failed to create playlist');
     }
   };
 
+  const handleNavClick = (view) => {
+    setActiveView(view);
+    if (isMobileOpen && onCloseMobile) onCloseMobile();
+  };
+
+  const handlePlaylistClick = (playlistId) => {
+    onSelectPlaylist?.(playlistId);
+    if (isMobileOpen && onCloseMobile) onCloseMobile();
+  };
+
   return (
-    <aside className="w-64 bg-audira-sidebar flex flex-col border-r border-audira-border h-full flex-shrink-0 select-none">
-      {/* Brand Logo & Name */}
-      <div className="p-6 pb-4 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] flex items-center justify-center shadow-lg shadow-purple-900/30">
-          <div className="w-full h-full bg-[#0D0E15] rounded-[10px] flex items-center justify-center">
-            <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-purple-400 to-cyan-300 text-lg">A</span>
-          </div>
-        </div>
-        <div>
-          <h1 className="font-black tracking-wider text-lg bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-            AUDIRA
-          </h1>
-          <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase -mt-1">Music Free</p>
-        </div>
-      </div>
-
-      {/* Main Navigation */}
-      <nav className="px-3 space-y-1 mt-2">
-        <button
-          onClick={() => setActiveView('home')}
-          className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
-            activeView === 'home'
-              ? 'bg-audira-hover text-white shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-audira-hover/50'
-          }`}
-        >
-          <Home size={20} className={activeView === 'home' ? 'text-purple-400' : ''} />
-          Home
-        </button>
-
-        <button
-          onClick={() => setActiveView('search')}
-          className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
-            activeView === 'search'
-              ? 'bg-audira-hover text-white shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-audira-hover/50'
-          }`}
-        >
-          <Search size={20} className={activeView === 'search' ? 'text-cyan-400' : ''} />
-          Search
-        </button>
-
-        <button
-          onClick={() => setActiveView('library')}
-          className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
-            activeView === 'library'
-              ? 'bg-audira-hover text-white shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-audira-hover/50'
-          }`}
-        >
-          <Library size={20} className={activeView === 'library' ? 'text-pink-400' : ''} />
-          Your Library
-        </button>
-      </nav>
-
-      {/* Quick Actions */}
-      <div className="px-3 mt-6 pt-4 border-t border-audira-border/60 space-y-1">
-        <button
-          onClick={handleCreatePlaylist}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-audira-hover/50 transition"
-        >
-          <PlusSquare size={18} className="text-purple-400" />
-          Create Playlist
-        </button>
-
-        <button
-          onClick={onOpenImport}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-audira-hover/50 transition group"
-        >
-          <DownloadCloud size={18} className="text-emerald-400 group-hover:animate-bounce" />
-          Import from Spotify
-        </button>
-      </div>
-
-      {/* User Playlists & Folders scrollable container */}
-      <div className="flex-1 overflow-y-auto px-3 mt-4 space-y-1">
-        <p className="px-3 text-[11px] font-bold tracking-wider text-slate-500 uppercase mb-2">Collections</p>
-
-        {/* Liked Songs Entry */}
-        <button
-          onClick={() => setActiveView('liked')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition text-left ${
-            activeView === 'liked' ? 'bg-audira-hover text-white' : 'text-slate-400 hover:text-white hover:bg-audira-hover/40'
-          }`}
-        >
-          <div className="w-5 h-5 rounded bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center">
-            <span className="text-[10px]">💜</span>
-          </div>
-          <span className="truncate">Liked Songs</span>
-          {libraryData.liked_songs_count > 0 && (
-            <span className="ml-auto text-[10px] text-slate-500">{libraryData.liked_songs_count}</span>
-          )}
-        </button>
-
-        {/* User Playlists */}
-        {libraryData.playlists.map(pl => (
-          <button
-            key={pl.id}
-            onClick={() => onSelectPlaylist?.(pl.id)}
-            className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-audira-hover/40 transition text-left truncate"
-          >
-            <Music2 size={14} className="text-slate-500 flex-shrink-0" />
-            <span className="truncate">{pl.title}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Discord-style User Profile Dock at bottom of Sidebar */}
-      {isAuthenticated && user && (
-        <div className="p-3 border-t border-audira-border/60 bg-[#08090E]/80 backdrop-blur-sm">
-          <button
-            onClick={() => setActiveView('profile')}
-            className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-audira-hover transition text-left group"
-          >
-            <div className="relative shrink-0">
-              <div
-                className="w-9 h-9 rounded-full overflow-hidden p-[2px] bg-[#11121C] shadow-md transition-transform group-hover:scale-105"
-                style={{ border: `2px solid ${user.accent_color || '#7C3AED'}` }}
-              >
-                <img
-                  src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
-                  alt={user.display_name}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0B0C14]" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
-                {user.display_name}
-              </p>
-              <p className="text-[10px] text-slate-500 truncate">@{user.username}</p>
-            </div>
-          </button>
-        </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden transition-opacity"
+        />
       )}
-    </aside>
+
+      {/* Sidebar Container */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-50
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          ${isCollapsed ? 'md:w-20' : 'md:w-64'}
+          w-72 bg-audira-sidebar flex flex-col border-r border-audira-border/80 h-full select-none
+          transition-all duration-300 ease-in-out shrink-0
+        `}
+      >
+        {/* Brand Header */}
+        <div className="p-4 md:p-5 flex items-center justify-between border-b border-white/[0.04]">
+          <div
+            onClick={() => handleNavClick('home')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] flex items-center justify-center shadow-lg shadow-purple-900/30 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-[#0D0E15] rounded-[10px] flex items-center justify-center">
+                <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-purple-400 to-cyan-300 text-lg">A</span>
+              </div>
+            </div>
+            {(!isCollapsed || isMobileOpen) && (
+              <div>
+                <h1 className="font-black tracking-wider text-lg bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent leading-tight">
+                  AUDIRA
+                </h1>
+                <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">Music Free</p>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Collapse / Mobile Close Button */}
+          <div className="flex items-center">
+            {isMobileOpen ? (
+              <button
+                onClick={onCloseMobile}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 md:hidden"
+              >
+                <X size={20} />
+              </button>
+            ) : (
+              <button
+                onClick={toggleCollapse}
+                title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                className="hidden md:flex p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-audira-hover transition"
+              >
+                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Primary Navigation */}
+        <nav className="p-3 space-y-1">
+          <button
+            onClick={() => handleNavClick('home')}
+            title="Home"
+            className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+              activeView === 'home'
+                ? 'bg-audira-card text-white shadow-sm border border-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-audira-hover/60'
+            }`}
+          >
+            <Home size={20} className={activeView === 'home' ? 'text-purple-400 shrink-0' : 'shrink-0'} />
+            {(!isCollapsed || isMobileOpen) && <span>Home</span>}
+          </button>
+
+          <button
+            onClick={() => handleNavClick('search')}
+            title="Search"
+            className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+              activeView === 'search'
+                ? 'bg-audira-card text-white shadow-sm border border-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-audira-hover/60'
+            }`}
+          >
+            <Search size={20} className={activeView === 'search' ? 'text-cyan-400 shrink-0' : 'shrink-0'} />
+            {(!isCollapsed || isMobileOpen) && <span>Search</span>}
+          </button>
+
+          <button
+            onClick={() => handleNavClick('library')}
+            title="Your Library"
+            className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+              activeView === 'library'
+                ? 'bg-audira-card text-white shadow-sm border border-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-audira-hover/60'
+            }`}
+          >
+            <Library size={20} className={activeView === 'library' ? 'text-pink-400 shrink-0' : 'shrink-0'} />
+            {(!isCollapsed || isMobileOpen) && <span>Your Library</span>}
+          </button>
+        </nav>
+
+        {/* Quick Actions (Create Playlist & Spotify Import) */}
+        <div className="px-3 pt-3 pb-2 border-t border-white/[0.04] space-y-1">
+          <button
+            onClick={handleCreatePlaylist}
+            title="Create Playlist"
+            className="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-audira-hover/60 transition group"
+          >
+            <div className="w-6 h-6 rounded-lg bg-audira-card flex items-center justify-center shrink-0 border border-white/5 group-hover:border-purple-500/40">
+              <PlusSquare size={16} className="text-purple-400" />
+            </div>
+            {(!isCollapsed || isMobileOpen) && <span>Create Playlist</span>}
+          </button>
+
+          <button
+            onClick={() => {
+              onOpenImport?.();
+              if (isMobileOpen && onCloseMobile) onCloseMobile();
+            }}
+            title="Import from Spotify"
+            className="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-audira-hover/60 transition group"
+          >
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:border-emerald-500/50">
+              <DownloadCloud size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+            </div>
+            {(!isCollapsed || isMobileOpen) && (
+              <span className="flex items-center gap-1.5">
+                Import from Spotify
+                <Sparkles size={12} className="text-emerald-400" />
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Scrollable Collections / Playlists */}
+        <div className="flex-1 overflow-y-auto px-3 mt-2 space-y-1">
+          {(!isCollapsed || isMobileOpen) && (
+            <p className="px-3 text-[10px] font-bold tracking-wider text-slate-500 uppercase mb-2">
+              Collections
+            </p>
+          )}
+
+          {/* Liked Songs Entry */}
+          <button
+            onClick={() => handleNavClick('liked')}
+            title="Liked Songs"
+            className={`w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-xs font-semibold transition text-left ${
+              activeView === 'liked'
+                ? 'bg-audira-card text-white border border-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-audira-hover/40'
+            }`}
+          >
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shrink-0 shadow-sm shadow-purple-900/30">
+              <Heart size={14} className="fill-white text-white" />
+            </div>
+            {(!isCollapsed || isMobileOpen) && (
+              <>
+                <span className="truncate">Liked Songs</span>
+                {libraryData.liked_songs_count > 0 && (
+                  <span className="ml-auto text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
+                    {libraryData.liked_songs_count}
+                  </span>
+                )}
+              </>
+            )}
+          </button>
+
+          {/* User Playlists */}
+          {libraryData.playlists.map(pl => (
+            <button
+              key={pl.id}
+              onClick={() => handlePlaylistClick(pl.id)}
+              title={pl.title}
+              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-audira-hover/40 transition text-left truncate"
+            >
+              <Music2 size={15} className="text-slate-500 shrink-0" />
+              {(!isCollapsed || isMobileOpen) && <span className="truncate">{pl.title}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Discord-style User Profile Dock at bottom */}
+        {isAuthenticated && user ? (
+          <div className="p-3 border-t border-white/[0.04] bg-[#07080D]/90 backdrop-blur-md">
+            <button
+              onClick={() => handleNavClick('profile')}
+              title={`View ${user.display_name}'s Profile`}
+              className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-audira-hover transition text-left group"
+            >
+              <div className="relative shrink-0">
+                <div
+                  className="w-9 h-9 rounded-full overflow-hidden p-[2px] bg-[#11121C] shadow-md transition-transform group-hover:scale-105"
+                  style={{ border: `2px solid ${user.accent_color || '#8B5CF6'}` }}
+                >
+                  <img
+                    src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
+                    alt={user.display_name}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0B0C14]" />
+              </div>
+
+              {(!isCollapsed || isMobileOpen) && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
+                    {user.display_name}
+                  </p>
+                  <p className="text-[10px] text-slate-500 truncate">@{user.username}</p>
+                </div>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 border-t border-white/[0.04] bg-[#07080D]/90">
+            <button
+              onClick={() => openAuth('login')}
+              className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 transition text-center"
+            >
+              {(!isCollapsed || isMobileOpen) ? 'Log In / Sign Up' : '🔑'}
+            </button>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }
