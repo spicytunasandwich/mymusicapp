@@ -427,21 +427,17 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ error: 'Google idToken is required.' });
     }
 
-    let payload;
-    if (process.env.GOOGLE_CLIENT_ID) {
-      const ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID
-      });
-      payload = ticket.getPayload();
-    } else {
-      const parts = idToken.split('.');
-      if (parts.length === 3) {
-        payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-      } else {
-        return res.status(400).json({ error: 'Invalid Google token format.' });
-      }
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ error: 'Google OAuth is not configured on the server. Please set GOOGLE_CLIENT_ID.' });
     }
+
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: clientId
+    });
+    const payload = ticket.getPayload();
 
     const { sub: googleId, email, name, picture } = payload;
     if (!email) {
