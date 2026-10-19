@@ -456,9 +456,14 @@ exports.googleLogin = async (req, res) => {
     if (userRes.rows.length > 0) {
       user = userRes.rows[0];
       if (!user.google_id || !user.is_verified) {
-        await pool.query('UPDATE users SET google_id = $1, is_verified = true WHERE id = $2', [googleId, user.id]);
-        user.google_id = googleId;
-        user.is_verified = true;
+        const updateRes = await pool.query(
+          `UPDATE users
+           SET google_id = $1, is_verified = true, updated_at = NOW()
+           WHERE id = $2
+           RETURNING id, email, username, display_name, bio, avatar_url, banner_url, accent_color, is_verified, created_at`,
+          [googleId, user.id]
+        );
+        user = { ...user, ...updateRes.rows[0] };
       }
     } else {
       const baseUsername = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase();
@@ -475,7 +480,9 @@ exports.googleLogin = async (req, res) => {
 
       user = insertRes.rows[0];
       await pool.query(
-        `INSERT INTO user_settings (user_id, theme_accent, theme_mode) VALUES ($1, $2, 'dark')`,
+        `INSERT INTO user_settings (user_id, theme_accent, theme_mode)
+         VALUES ($1, $2, 'dark')
+         ON CONFLICT (user_id) DO NOTHING`,
         [user.id, randomAccent]
       );
     }
@@ -492,7 +499,7 @@ exports.googleLogin = async (req, res) => {
     });
   } catch (error) {
     console.error('Google login error:', error);
-    res.status(500).json({ error: 'Google login verification failed.' });
+    res.status(401).json({ error: error.message || 'Google login verification failed.' });
   }
 };
 

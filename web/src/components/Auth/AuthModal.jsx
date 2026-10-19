@@ -53,13 +53,19 @@ export default function AuthModal() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   const handleGoogleCredential = async (response) => {
-    if (!response?.credential) return;
+    if (!response?.credential) {
+      console.warn('Google response missing credential token:', response);
+      setError('No credential received from Google. Please try again.');
+      return;
+    }
     resetMessages();
     setLoading(true);
     try {
       await googleLogin(response.credential);
+      closeAuth();
     } catch (err) {
-      setError(err.message || 'Google sign-in failed. Please try again.');
+      console.error('Google login verification failure:', err);
+      setError(err.data?.error || err.message || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +78,15 @@ export default function AuthModal() {
         try {
           window.google.accounts.id.initialize({
             client_id: googleClientId,
-            callback: handleGoogleCredential
+            callback: handleGoogleCredential,
+            error_callback: (err) => {
+              console.error('Google GIS client error:', err);
+              if (err?.type === 'popup_closed') {
+                setError('Google sign-in window was closed.');
+              } else {
+                setError(`Google Sign-In: ${err?.type || 'Configuration or authorization error.'}`);
+              }
+            }
           });
           const btn = document.getElementById('google-signin-btn');
           if (btn) {
