@@ -1,4 +1,4 @@
-const BASE_URL = '/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1';
 
 export async function apiRequest(endpoint, { method = 'GET', body, headers = {} } = {}) {
   const token = localStorage.getItem('audira_token');
