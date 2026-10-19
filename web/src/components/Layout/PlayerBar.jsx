@@ -4,6 +4,7 @@ import {
   Volume2, Volume1, VolumeX, Heart, Mic2
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
+import { useAuth } from '../../context/AuthContext';
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -35,6 +36,7 @@ export default function PlayerBar() {
     toggleLike,
     isLiked
   } = usePlayer();
+  const { user } = useAuth();
 
   if (!currentTrack) {
     return (
@@ -182,6 +184,25 @@ export default function PlayerBar() {
             className="w-20"
           />
         </div>
+
+        {/* User Presence Avatar (Supports Animated GIFs) */}
+        {user && (
+          <div
+            title={`Streaming as ${user.display_name}`}
+            className="hidden xl:flex items-center pl-3 border-l border-audira-border/60 shrink-0"
+          >
+            <div
+              className="w-7 h-7 rounded-full overflow-hidden p-[1px] bg-[#11121C] shadow-sm"
+              style={{ border: `1.5px solid ${user.accent_color || '#7C3AED'}` }}
+            >
+              <img
+                src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
+                alt={user.display_name}
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </footer>
   );

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 
 export default function Sidebar({ activeView, setActiveView, onOpenImport, onSelectPlaylist }) {
-  const { isAuthenticated, openAuth } = useAuth();
+  const { user, isAuthenticated, openAuth } = useAuth();
   const [libraryData, setLibraryData] = useState({ folders: [], playlists: [], liked_songs_count: 0 });
 
   useEffect(() => {
@@ -141,6 +141,37 @@ export default function Sidebar({ activeView, setActiveView, onOpenImport, onSel
           </button>
         ))}
       </div>
+
+      {/* Discord-style User Profile Dock at bottom of Sidebar */}
+      {isAuthenticated && user && (
+        <div className="p-3 border-t border-audira-border/60 bg-[#08090E]/80 backdrop-blur-sm">
+          <button
+            onClick={() => setActiveView('profile')}
+            className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-audira-hover transition text-left group"
+          >
+            <div className="relative shrink-0">
+              <div
+                className="w-9 h-9 rounded-full overflow-hidden p-[2px] bg-[#11121C] shadow-md transition-transform group-hover:scale-105"
+                style={{ border: `2px solid ${user.accent_color || '#7C3AED'}` }}
+              >
+                <img
+                  src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
+                  alt={user.display_name}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0B0C14]" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
+                {user.display_name}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">@{user.username}</p>
+            </div>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
