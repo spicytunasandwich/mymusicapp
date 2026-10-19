@@ -22,7 +22,7 @@ exports.importSpotifyPlaylist = async (req, res) => {
       return res.status(400).json({ error: 'Spotify playlist URL or ID is required.' });
     }
 
-    const playlistId = extractPlaylistId(playlistUrl);
+    const playlistId = await extractPlaylistId(playlistUrl);
     if (!playlistId) {
       return res.status(400).json({ error: 'Invalid Spotify playlist URL. Please paste a valid Spotify playlist link.' });
     }
