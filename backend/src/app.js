@@ -11,10 +11,18 @@ const libraryRoutes = require('./routes/library.routes');
 const userRoutes = require('./routes/user.routes');
 const importRoutes = require('./routes/import.routes');
 
+const path = require('path');
+
 const app = express();
 
+// Trust proxy for Render / Cloudflare HTTPS termination
+app.enable('trust proxy');
+
 // Security & Middlewares
-app.use(helmet());
+// Allow cross-origin images so Cloudflare Pages and desktop can render uploads
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors({
   origin: '*', // Allow Web, Electron, and Android apps
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -24,9 +32,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
-// Static assets (brand assets & uploaded avatars/banners/covers)
-app.use('/public', express.static('public'));
-app.use('/uploads', express.static('uploads'));
+// Static assets with absolute directory paths
+app.use('/public', express.static(path.join(__dirname, '../public')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Base API v1 Contract
 app.use('/api/v1', healthRoutes);

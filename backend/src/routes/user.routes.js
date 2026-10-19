@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
-const upload = require('../middleware/upload.middleware');
+const { uploadSingleImage } = require('../middleware/upload.middleware');
 
 // Public Profile
 router.get('/profile/:username', userController.getPublicProfile);
@@ -15,6 +15,6 @@ router.get('/settings', requireAuth, userController.getSettings);
 router.patch('/settings', requireAuth, userController.updateSettings);
 
 // Image Uploads (Avatar, Banner, Playlist Cover)
-router.post('/upload', requireAuth, upload.single('image'), userController.uploadMedia);
+router.post('/upload', requireAuth, uploadSingleImage('image'), userController.uploadMedia);
 
 module.exports = router;

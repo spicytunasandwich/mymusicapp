@@ -159,8 +159,8 @@ exports.uploadMedia = async (req, res) => {
     }
 
     const host = req.get('host');
-    const protocol = req.protocol;
-    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : req.protocol);
+    const fileUrl = `${proto}://${host}/uploads/${req.file.filename}`;
 
     res.status(201).json({
       message: 'Image uploaded successfully.',
