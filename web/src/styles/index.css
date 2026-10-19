@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-accent: #8B5CF6;
+  --bg-main: #0B0C14;
+  --bg-sidebar: #06070B;
+  --bg-card: #13141F;
+  --bg-player: #0E0F1A;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  color: #F8FAFC;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27273A;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3F3F56;
+}
+
+/* Audio Player Range Sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  background: #27273A;
+  border-radius: 9999px;
+  height: 4px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  transition: transform 0.1s ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+  background: var(--primary-accent);
+}
+
+/* Electron Frameless Window Drag Regions */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.no-drag, button, input, a {
+  -webkit-app-region: no-drag;
+}

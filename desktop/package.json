@@ -1,0 +1,29 @@
+{
+  "name": "audira-desktop",
+  "version": "1.0.0",
+  "description": "Audira Music Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "electron-is-dev": "^3.0.1"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.audira.music",
+    "productName": "Audira",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "../web/public/brand/logo.svg"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Audira</string>
+    <string name="login_title">Welcome to Audira</string>
+    <string name="login_subtitle">Stream free music with zero limits</string>
+    <string name="login">Log In</string>
+    <string name="signup">Create Free Account</string>
+    <string name="email_or_username">Email or Username</string>
+    <string name="password">Password</string>
+    <string name="now_playing">Now Playing</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="audira_bg">#0B0C14</color>
+    <color name="audira_card">#13141F</color>
+    <color name="audira_player">#0E0F1A</color>
+    <color name="audira_border">#1F2030</color>
+    <color name="purple_primary">#8B5CF6</color>
+    <color name="purple_dark">#7C3AED</color>
+    <color name="cyan_accent">#06B6D4</color>
+    <color name="text_white">#F8FAFC</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="error_red">#EF4444</color>
+</resources>

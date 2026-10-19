@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tvLyricLine"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingVertical="10dp"
+    android:paddingHorizontal="16dp"
+    android:text="Lyric Line"
+    android:textColor="#555870"
+    android:textSize="20sp"
+    android:textStyle="bold"
+    android:lineSpacingExtra="4dp" />
