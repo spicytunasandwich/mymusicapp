@@ -38,19 +38,43 @@ export default function ProfileView({ username, onSelectPlaylist }) {
       .finally(() => setLoading(false));
   }, [targetUsername]);
 
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
   const handleImageUpload = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('image', file);
+    setUploadError('');
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      setUploadError('Invalid format. Please upload a PNG, JPG, WebP, or GIF image.');
+      return;
+    }
+
+    // 8 MB max size check
+    if (file.size > 8 * 1024 * 1024) {
+      setUploadError('File size exceeds the 8 MB limit. Please select a smaller file.');
+      return;
+    }
+
+    if (type === 'avatar') setUploadingAvatar(true);
+    else setUploadingBanner(true);
 
     try {
+      // For GIFs, we send the original untouched binary stream to preserve all animated frames
+      const formData = new FormData();
+      formData.append('image', file);
+
       const res = await api.post('/users/upload', formData);
       if (type === 'avatar') setAvatarUrl(res.url);
       else setBannerUrl(res.url);
     } catch (err) {
-      alert('Failed to upload image: ' + err.message);
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
+    } finally {
+      if (type === 'avatar') setUploadingAvatar(false);
+      else setUploadingBanner(false);
     }
   };
 
@@ -203,23 +227,53 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 </div>
               </div>
 
+              {uploadError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-[11px] font-medium">
+                  {uploadError}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Upload Avatar</label>
-                  <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
+                  <label className="font-bold text-slate-400 block mb-1">Upload Avatar (GIF, PNG, JPG, WebP)</label>
+                  <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
                     <Camera size={14} />
-                    <span>Choose file</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'avatar')} className="hidden" />
+                    <span>{uploadingAvatar ? 'Uploading...' : 'Choose file'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      disabled={uploadingAvatar}
+                      onChange={(e) => handleImageUpload(e, 'avatar')}
+                      className="hidden"
+                    />
                   </label>
+                  {avatarUrl && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={avatarUrl} alt="Avatar Preview" className="w-8 h-8 rounded-full object-cover border border-purple-500" />
+                      <span className="text-[10px] text-emerald-400 font-semibold">Avatar Ready</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Upload Banner</label>
-                  <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
+                  <label className="font-bold text-slate-400 block mb-1">Upload Banner (GIF, PNG, JPG, WebP)</label>
+                  <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
                     <Camera size={14} />
-                    <span>Choose file</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner')} className="hidden" />
+                    <span>{uploadingBanner ? 'Uploading...' : 'Choose file'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      disabled={uploadingBanner}
+                      onChange={(e) => handleImageUpload(e, 'banner')}
+                      className="hidden"
+                    />
                   </label>
+                  {bannerUrl && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="w-12 h-5 rounded overflow-hidden border border-purple-500 bg-cover bg-center" style={{ backgroundImage: `url(${bannerUrl})` }} />
+                      <span className="text-[10px] text-emerald-400 font-semibold">Banner Ready</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
