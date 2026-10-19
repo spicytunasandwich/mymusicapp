@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
 import { CardSkeleton, QuickPlaySkeleton } from '../components/Common/SkeletonLoader';
+import EqualizerWave from '../components/Common/EqualizerWave';
 
 export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlbum }) {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
@@ -170,8 +171,12 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
                   }`}
                 >
                   <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                    <span className="text-xs font-bold text-slate-500 w-5 text-center shrink-0">
-                      {isCurrentPlaying ? '▶' : i + 1}
+                    <span className="text-xs font-bold text-slate-500 w-5 text-center shrink-0 flex items-center justify-center">
+                      {isCurrentPlaying ? (
+                        <EqualizerWave className="mx-auto" />
+                      ) : (
+                        i + 1
+                      )}
                     </span>
                     <img
                       src={track.cover_url}

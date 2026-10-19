@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
 import { TrackRowSkeleton } from '../components/Common/SkeletonLoader';
+import EqualizerWave from '../components/Common/EqualizerWave';
 
 export default function PlaylistView({ playlistId, onBack }) {
   const { playTrack, currentTrack, isPlaying, toggleLike, isLiked } = usePlayer();
@@ -138,8 +139,12 @@ export default function PlaylistView({ playlistId, onBack }) {
                   className={`group hover:bg-audira-card/60 transition cursor-pointer ${isCurrent ? 'bg-purple-950/20' : ''}`}
                 >
                   <td className="py-3 px-3 text-center text-slate-400 font-bold">
-                    <span className="group-hover:hidden">
-                      {isCurrentPlaying ? '▶' : index + 1}
+                    <span className="group-hover:hidden flex items-center justify-center">
+                      {isCurrentPlaying ? (
+                        <EqualizerWave className="mx-auto" />
+                      ) : (
+                        index + 1
+                      )}
                     </span>
                     <Play size={13} className="hidden group-hover:inline fill-white text-white mx-auto" />
                   </td>

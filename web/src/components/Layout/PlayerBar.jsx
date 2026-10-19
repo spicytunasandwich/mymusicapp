@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useAuth } from '../../context/AuthContext';
+import EqualizerWave from '../Common/EqualizerWave';
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -75,9 +76,12 @@ export default function PlayerBar() {
             </div>
           </div>
           <div className="overflow-hidden min-w-0">
-            <p className="text-xs sm:text-sm font-bold text-white truncate hover:underline cursor-pointer">
-              {currentTrack.title}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs sm:text-sm font-bold text-white truncate hover:underline cursor-pointer">
+                {currentTrack.title}
+              </p>
+              {isPlaying && <EqualizerWave className="shrink-0" />}
+            </div>
             <p className="text-[11px] sm:text-xs text-slate-400 truncate hover:text-slate-200 cursor-pointer">
               {currentTrack.artist_name || 'Audira Artist'}
             </p>
