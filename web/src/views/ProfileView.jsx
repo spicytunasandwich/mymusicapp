@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { User, Calendar, Edit3, Music2, Camera, Check, X, ShieldCheck } from 'lucide-react';
+import {
+  User, Calendar, Edit3, Music2, Camera, Check, X,
+  ShieldCheck, Sparkles, Award, Headphones
+} from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/Common/ImageCropModal';
+import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
 
-const ACCENTS = ['#7C3AED', '#8B5CF6', '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EC4899'];
+const ACCENTS = [
+  '#8B5CF6', '#7C3AED', '#3B82F6', '#06B6D4',
+  '#10B981', '#F59E0B', '#EC4899', '#EF4444'
+];
 
 export default function ProfileView({ username, onSelectPlaylist }) {
   const { user: currentUser, updateUser } = useAuth();
@@ -18,7 +25,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
   // Edit fields
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [accentColor, setAccentColor] = useState('#7C3AED');
+  const [accentColor, setAccentColor] = useState('#8B5CF6');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,7 +41,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
         setProfile(res.profile);
         setDisplayName(res.profile.display_name || '');
         setBio(res.profile.bio || '');
-        setAccentColor(res.profile.accent_color || '#7C3AED');
+        setAccentColor(res.profile.accent_color || '#8B5CF6');
         setAvatarUrl(res.profile.avatar_url || '');
         setBannerUrl(res.profile.banner_url || '');
       })
@@ -57,13 +64,11 @@ export default function ProfileView({ username, onSelectPlaylist }) {
       return;
     }
 
-    // 8 MB max size check
     if (file.size > 8 * 1024 * 1024) {
       setUploadError('File size exceeds the 8 MB limit. Please select a smaller file.');
       return;
     }
 
-    // Open crop/preview step!
     setCropModal({ isOpen: true, file, type });
     e.target.value = '';
   };
@@ -113,8 +118,8 @@ export default function ProfileView({ username, onSelectPlaylist }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-300">
+        <ProfileHeaderSkeleton />
       </div>
     );
   }
@@ -128,76 +133,109 @@ export default function ProfileView({ username, onSelectPlaylist }) {
     );
   }
 
+  const effectiveAccent = profile.accent_color || '#8B5CF6';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-200">
-      {/* Discord-Style Profile Banner & Avatar */}
-      <div className="relative rounded-3xl overflow-hidden border border-audira-border bg-audira-card shadow-2xl">
-        {/* Banner Area (8:3 ratio) */}
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-300">
+      {/* Discord-Inspired Profile Card Container */}
+      <div className="discord-card overflow-hidden shadow-2xl relative">
+        {/* Banner Area (8:3 Ratio) */}
         <div
           className="w-full aspect-[8/3] max-h-64 bg-cover bg-center relative transition-all duration-300"
           style={{
-            backgroundColor: profile.accent_color || '#7C3AED',
+            backgroundColor: effectiveAccent,
             backgroundImage: profile.banner_url ? `url(${profile.banner_url})` : undefined
           }}
         >
+          {/* Subtle gradient vignette over banner */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#10111B]/80 via-transparent to-transparent pointer-events-none" />
+
           {isOwnProfile && !isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="absolute top-4 right-4 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-xs font-bold text-white border border-white/20 transition shadow-lg"
+              className="absolute top-4 right-4 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-xs font-bold text-white border border-white/20 transition shadow-lg hover:scale-105 active:scale-95"
             >
               <Edit3 size={14} />
-              Edit Profile
+              <span>Edit Profile</span>
             </button>
           )}
         </div>
 
-        {/* Profile Card Overlay */}
-        <div className="px-8 pb-8 pt-0 relative flex flex-col md:flex-row md:items-end justify-between gap-6 -mt-16">
-          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 text-center md:text-left">
-            {/* Avatar with Custom Discord Accent Ring */}
-            <div
-              className="w-32 h-32 rounded-3xl overflow-hidden p-1 bg-[#0B0C14] shadow-2xl flex-shrink-0"
-              style={{ border: `3px solid ${profile.accent_color || '#7C3AED'}` }}
-            >
-              <img
-                src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
-                alt={profile.display_name}
-                className="w-full h-full object-cover rounded-[20px]"
+        {/* Profile Card Header with Discord Squircle & Badges */}
+        <div className="px-6 sm:px-8 pb-8 pt-0 relative flex flex-col md:flex-row md:items-end justify-between gap-6 -mt-16 sm:-mt-20">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
+            {/* Avatar with Discord Accent Border + Online Presence Indicator */}
+            <div className="relative shrink-0">
+              <div
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden p-[3px] bg-[#10111B] shadow-2xl transition-transform hover:scale-105"
+                style={{ border: `3.5px solid ${effectiveAccent}` }}
+              >
+                <img
+                  src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
+                  alt={profile.display_name}
+                  className="w-full h-full object-cover rounded-[20px]"
+                />
+              </div>
+              {/* Discord-style Online status dot */}
+              <div
+                title="Active on Audira"
+                className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-[#10111B] shadow-md flex items-center justify-center"
               />
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-center md:justify-start gap-2">
-                <h1 className="text-2xl md:text-3xl font-black text-white">{profile.display_name}</h1>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h1 className="text-2xl sm:text-3xl font-black text-white">{profile.display_name}</h1>
                 {profile.is_verified && (
-                  <span title="Verified Listener"><ShieldCheck size={20} className="text-cyan-400 fill-cyan-400/20" /></span>
+                  <span title="Verified Listener">
+                    <ShieldCheck size={22} className="text-cyan-400 fill-cyan-400/20" />
+                  </span>
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-400">@{profile.username}</p>
-              <div className="flex items-center justify-center md:justify-start gap-2 text-[11px] text-slate-500 pt-1">
-                <Calendar size={13} />
-                <span>Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+
+              {/* Discord-Style Role Badges */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
+                <span className="discord-badge">
+                  <Headphones size={13} className="text-purple-400" />
+                  <span>Listener</span>
+                </span>
+                <span className="discord-badge">
+                  <Sparkles size={13} className="text-amber-400" />
+                  <span>Early Adopter</span>
+                </span>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pl-2">
+                  <Calendar size={13} />
+                  <span>Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bio Section */}
+        {/* Bio Card Section */}
         {profile.bio && (
-          <div className="px-8 pb-6 pt-2 border-t border-audira-border/50 text-xs text-slate-300 leading-relaxed max-w-2xl">
-            <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1">About Me</p>
-            {profile.bio}
+          <div className="px-6 sm:px-8 pb-6 pt-3 border-t border-white/5 text-xs text-slate-300 leading-relaxed max-w-2xl">
+            <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1.5">About Me</p>
+            <div className="p-3.5 rounded-xl bg-audira-card/60 border border-white/5 whitespace-pre-line">
+              {profile.bio}
+            </div>
           </div>
         )}
       </div>
 
       {/* Edit Profile Modal */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-audira-card border border-audira-border rounded-2xl shadow-2xl p-6 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 border-b border-audira-border">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-audira-card border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animation-scale-up">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <h3 className="font-black text-white text-base">Edit Public Profile</h3>
-              <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4 pt-4 text-xs">
@@ -207,7 +245,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -218,7 +256,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell listeners what you are vibing to..."
-                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -230,7 +268,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                       key={hex}
                       type="button"
                       onClick={() => setAccentColor(hex)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center transition shadow-md"
+                      className="w-7 h-7 rounded-full flex items-center justify-center transition shadow-md hover:scale-110"
                       style={{ backgroundColor: hex }}
                     >
                       {accentColor === hex && <Check size={14} className="text-white" />}
@@ -289,7 +327,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-audira-border mt-4">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
@@ -300,7 +338,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-bold shadow-lg shadow-purple-900/40 hover:opacity-95 transition"
+                  className="px-6 py-2 rounded-xl bg-audira-accent hover:opacity-90 text-white font-bold shadow-glow-accent transition"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -331,9 +369,13 @@ export default function ProfileView({ username, onSelectPlaylist }) {
               <div
                 key={pl.id}
                 onClick={() => onSelectPlaylist?.(pl.id)}
-                className="bg-audira-card/40 hover:bg-audira-card p-3 rounded-2xl border border-audira-border transition cursor-pointer"
+                className="spotify-card p-3 rounded-2xl cursor-pointer"
               >
-                <img src={pl.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'} alt={pl.title} className="w-full aspect-square rounded-xl object-cover mb-2" />
+                <img
+                  src={pl.cover_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'}
+                  alt={pl.title}
+                  className="w-full aspect-square rounded-xl object-cover mb-2"
+                />
                 <h4 className="text-xs font-bold text-white truncate">{pl.title}</h4>
                 <p className="text-[10px] text-slate-400 mt-0.5">{pl.track_count || 0} tracks</p>
               </div>
