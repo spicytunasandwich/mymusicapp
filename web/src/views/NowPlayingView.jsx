@@ -1,15 +1,44 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Mic2, Heart, Music } from 'lucide-react';
+import { X, Mic2, Heart, Music, Disc3, Clock } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { api } from '../api/client';
 
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds < 0) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
 export default function NowPlayingView() {
-  const { currentTrack, currentTimeMs, isLyricsOpen, toggleLyrics, toggleLike, isLiked, seek } = usePlayer();
+  const {
+    currentTrack,
+    currentTime,
+    duration,
+    currentTimeMs,
+    isLyricsOpen,
+    toggleLyrics,
+    toggleLike,
+    isLiked,
+    seek
+  } = usePlayer();
   const [lyricsData, setLyricsData] = useState({ synced: false, lines: [], has_lyrics: false });
   const [loading, setLoading] = useState(false);
   const activeLineRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
+  // Close on Escape key press
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && isLyricsOpen) {
+        toggleLyrics();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLyricsOpen, toggleLyrics]);
+
+  // Fetch lyrics when track changes or modal opens
   useEffect(() => {
     if (!currentTrack?.id || !isLyricsOpen) return;
 
@@ -23,7 +52,7 @@ export default function NowPlayingView() {
       .finally(() => setLoading(false));
   }, [currentTrack?.id, isLyricsOpen]);
 
-  // Find active synced lyric index
+  // Determine active lyric index
   let activeIndex = -1;
   if (lyricsData.synced && lyricsData.lines.length > 0) {
     for (let i = 0; i < lyricsData.lines.length; i++) {
@@ -35,7 +64,7 @@ export default function NowPlayingView() {
     }
   }
 
-  // Auto-scroll active line to vertical center of container
+  // Smoothly center the active lyric in the viewport
   useEffect(() => {
     if (activeLineRef.current && scrollContainerRef.current) {
       activeLineRef.current.scrollIntoView({
@@ -50,34 +79,46 @@ export default function NowPlayingView() {
   const liked = isLiked(currentTrack.id);
 
   return (
-    <div className="fixed inset-0 z-40 bg-gradient-to-b from-[#1E112A] via-[#0B0C14] to-[#06070B] flex flex-col animate-in fade-in duration-300 pb-24">
-      {/* Header bar */}
-      <div className="h-16 px-8 flex items-center justify-between border-b border-purple-900/30">
-        <div className="flex items-center gap-2 text-purple-300 text-xs font-bold tracking-wider uppercase">
-          <Mic2 size={16} />
-          <span>Now Playing & Synced Lyrics</span>
+    <div className="fixed inset-0 z-50 flex flex-col animate-in fade-in duration-300 pb-20 select-none overflow-hidden">
+      {/* Immersive Blurred Album Art Backdrop */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+        <img
+          src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
+          alt=""
+          className="w-full h-full object-cover scale-150 blur-3xl opacity-35 filter brightness-75"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#08090E]/85 via-[#0B0C14]/90 to-[#08090E]/95" />
+      </div>
+
+      {/* Top Header Bar */}
+      <header className="h-16 px-6 md:px-10 flex items-center justify-between border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center gap-2.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-purple-300 uppercase tracking-widest">
+          <Mic2 size={15} className="text-purple-400" />
+          <span>Synced Lyrics</span>
         </div>
+
         <button
           onClick={toggleLyrics}
           className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition"
-          title="Close Lyrics View"
+          title="Close (Esc)"
         >
           <X size={22} />
         </button>
-      </div>
+      </header>
 
-      {/* Main Split: Left Cover Art + Right Synced Lyrics */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-8 gap-8 max-w-7xl mx-auto w-full items-center">
-        {/* Left Side: Cover Art + Track Details */}
-        <div className="w-full md:w-5/12 flex flex-col items-center justify-center p-6 text-center">
+      {/* Main Content: 2-Column Split */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 md:p-10 gap-8 lg:gap-12 max-w-7xl mx-auto w-full items-center">
+        {/* Left Column: Artwork Presentation & Metadata */}
+        <div className="w-full lg:w-5/12 flex flex-col items-center justify-center text-center shrink-0">
           <div className="relative group">
+            {/* Ambient Backlight Glow */}
             <div
-              className="absolute -inset-4 rounded-3xl opacity-40 blur-2xl transition duration-500 group-hover:opacity-60"
+              className="absolute -inset-6 rounded-3xl opacity-40 blur-3xl transition-opacity duration-700 group-hover:opacity-60"
               style={{
-                background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, rgba(6,182,212,0.3) 100%)'
+                background: 'radial-gradient(circle, var(--audira-accent-glow) 0%, rgba(6,182,212,0.2) 100%)'
               }}
             />
-            <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-2xl border border-purple-500/20">
+            <div className="relative w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
               <img
                 src={currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600'}
                 alt={currentTrack.title}
@@ -86,38 +127,51 @@ export default function NowPlayingView() {
             </div>
           </div>
 
-          <div className="mt-8 flex items-center justify-between w-full max-w-xs">
-            <div className="text-left overflow-hidden">
-              <h2 className="text-2xl font-black text-white truncate">{currentTrack.title}</h2>
-              <p className="text-sm font-semibold text-purple-300 truncate">{currentTrack.artist_name || 'Audira Artist'}</p>
+          <div className="mt-8 flex items-center justify-between w-full max-w-xs md:max-w-sm">
+            <div className="text-left overflow-hidden min-w-0 pr-3">
+              <h2 className="text-xl sm:text-2xl font-black text-white truncate">{currentTrack.title}</h2>
+              <p className="text-sm font-semibold text-purple-300 truncate mt-0.5">
+                {currentTrack.artist_name || 'Audira Artist'}
+              </p>
               {currentTrack.album_title && (
-                <p className="text-xs text-slate-500 truncate mt-0.5">{currentTrack.album_title}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.album_title}</p>
               )}
             </div>
+
             <button
               onClick={() => toggleLike(currentTrack.id)}
-              className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 transition flex-shrink-0"
+              className="p-3 rounded-full bg-white/5 hover:bg-white/10 transition shrink-0"
+              title={liked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}
             >
               <Heart size={22} className={liked ? 'fill-purple-500 text-purple-500' : 'text-slate-400 hover:text-white'} />
             </button>
           </div>
+
+          {/* Time Scrubber info */}
+          <div className="mt-4 flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span>{formatTime(currentTime)}</span>
+            <span>/</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
 
-        {/* Right Side: Line-by-line Synced Lyrics */}
+        {/* Right Column: Line-by-line Synced Lyrics */}
         <div
           ref={scrollContainerRef}
-          className="w-full md:w-7/12 h-full overflow-y-auto px-4 md:px-8 py-16 space-y-6 text-left mask-fade"
+          className="w-full lg:w-7/12 h-full overflow-y-auto px-4 md:px-8 py-20 space-y-7 text-left lyrics-mask scrollbar-none"
         >
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400">
-              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-sm font-semibold">Loading synced lyrics...</p>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 py-20">
+              <div className="w-9 h-9 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm font-semibold text-slate-300">Loading synced lyrics...</p>
             </div>
           ) : !lyricsData.has_lyrics || lyricsData.lines.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center py-20">
-              <Music size={40} className="mb-4 opacity-40 text-purple-400" />
-              <h3 className="text-lg font-bold text-slate-300">No lyrics available</h3>
-              <p className="text-xs text-slate-500 mt-1">Enjoy the music flow!</p>
+              <Disc3 size={48} className="mb-4 opacity-40 text-purple-400 animate-spin" style={{ animationDuration: '6s' }} />
+              <h3 className="text-xl font-bold text-slate-200">No lyrics available</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                We couldn't find synced lyrics for this song. Enjoy the high-fidelity audio stream!
+              </p>
             </div>
           ) : (
             lyricsData.lines.map((line, idx) => {
@@ -125,20 +179,33 @@ export default function NowPlayingView() {
               const isPast = idx < activeIndex;
 
               return (
-                <p
+                <div
                   key={idx}
                   ref={isActive ? activeLineRef : null}
                   onClick={() => line.timeMs !== null && seek(line.timeMs / 1000)}
-                  className={`text-xl md:text-2xl font-extrabold cursor-pointer transition-all duration-300 select-none ${
-                    isActive
-                      ? 'text-white scale-105 origin-left text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-white to-cyan-200 drop-shadow-[0_0_15px_rgba(139,92,246,0.6)]'
-                      : isPast
-                      ? 'text-slate-400/80 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-400'
-                  }`}
+                  className="group flex items-center gap-4 cursor-pointer"
                 >
-                  {line.text || '♪'}
-                </p>
+                  {/* Active Neon Indicator Bar */}
+                  <div
+                    className={`w-1 rounded-full transition-all duration-300 shrink-0 ${
+                      isActive
+                        ? 'h-8 bg-purple-400 shadow-glow-accent'
+                        : 'h-0 bg-transparent'
+                    }`}
+                  />
+
+                  <p
+                    className={`transition-all duration-300 select-none leading-relaxed ${
+                      isActive
+                        ? 'text-2xl sm:text-3xl md:text-4xl font-black text-white scale-[1.02] origin-left drop-shadow-[0_4px_24px_var(--audira-accent-glow)]'
+                        : isPast
+                        ? 'text-lg sm:text-xl md:text-2xl font-bold text-white/50 hover:text-white/80'
+                        : 'text-lg sm:text-xl md:text-2xl font-bold text-white/20 hover:text-white/50'
+                    }`}
+                  >
+                    {line.text || '♪'}
+                  </p>
+                </div>
               );
             })
           )}

@@ -183,3 +183,9 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .no-drag, button, input, a {
   -webkit-app-region: no-drag;
 }
+
+/* Immersive Lyrics Gradient Mask */
+.lyrics-mask {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+}
