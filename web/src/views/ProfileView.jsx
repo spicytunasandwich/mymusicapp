@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Calendar, Edit3, Music2, Camera, Check, X, ShieldCheck } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import ImageCropModal from '../components/Common/ImageCropModal';
 
 const ACCENTS = ['#7C3AED', '#8B5CF6', '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EC4899'];
 
@@ -10,6 +11,9 @@ export default function ProfileView({ username, onSelectPlaylist }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Crop / Preview state
+  const [cropModal, setCropModal] = useState({ isOpen: false, file: null, type: 'avatar' });
 
   // Edit fields
   const [displayName, setDisplayName] = useState('');
@@ -42,14 +46,14 @@ export default function ProfileView({ username, onSelectPlaylist }) {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
-  const handleImageUpload = async (e, type) => {
+  const handleSelectFile = (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadError('');
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowed.includes(file.type.toLowerCase())) {
-      setUploadError('Invalid format. Please upload a PNG, JPG, WebP, or GIF image.');
+      setUploadError('Invalid format. Please select a PNG, JPG, WebP, or GIF image.');
       return;
     }
 
@@ -59,13 +63,21 @@ export default function ProfileView({ username, onSelectPlaylist }) {
       return;
     }
 
+    // Open crop/preview step!
+    setCropModal({ isOpen: true, file, type });
+    e.target.value = '';
+  };
+
+  const handleApplyCrop = async (croppedFile) => {
+    const type = cropModal.type;
+    setCropModal({ isOpen: false, file: null, type: 'avatar' });
+
     if (type === 'avatar') setUploadingAvatar(true);
     else setUploadingBanner(true);
 
     try {
-      // For GIFs, we send the original untouched binary stream to preserve all animated frames
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', croppedFile);
 
       const res = await api.post('/users/upload', formData);
       if (type === 'avatar') setAvatarUrl(res.url);
@@ -120,9 +132,9 @@ export default function ProfileView({ username, onSelectPlaylist }) {
     <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-200">
       {/* Discord-Style Profile Banner & Avatar */}
       <div className="relative rounded-3xl overflow-hidden border border-audira-border bg-audira-card shadow-2xl">
-        {/* Banner Area */}
+        {/* Banner Area (8:3 ratio) */}
         <div
-          className="h-52 w-full bg-cover bg-center relative transition-colors duration-300"
+          className="w-full aspect-[8/3] max-h-64 bg-cover bg-center relative transition-all duration-300"
           style={{
             backgroundColor: profile.accent_color || '#7C3AED',
             backgroundImage: profile.banner_url ? `url(${profile.banner_url})` : undefined
@@ -235,43 +247,43 @@ export default function ProfileView({ username, onSelectPlaylist }) {
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Upload Avatar (GIF, PNG, JPG, WebP)</label>
+                  <label className="font-bold text-slate-400 block mb-1">Avatar (1:1 • 512×512 HD)</label>
                   <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
                     <Camera size={14} />
-                    <span>{uploadingAvatar ? 'Uploading...' : 'Choose file'}</span>
+                    <span>{uploadingAvatar ? 'Uploading...' : 'Choose image'}</span>
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
                       disabled={uploadingAvatar}
-                      onChange={(e) => handleImageUpload(e, 'avatar')}
+                      onChange={(e) => handleSelectFile(e, 'avatar')}
                       className="hidden"
                     />
                   </label>
                   {avatarUrl && (
                     <div className="mt-2 flex items-center gap-2">
                       <img src={avatarUrl} alt="Avatar Preview" className="w-8 h-8 rounded-full object-cover border border-purple-500" />
-                      <span className="text-[10px] text-emerald-400 font-semibold">Avatar Ready</span>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Ready (512×512)</span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Upload Banner (GIF, PNG, JPG, WebP)</label>
+                  <label className="font-bold text-slate-400 block mb-1">Banner (8:3 • 1280×480 HD)</label>
                   <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
                     <Camera size={14} />
-                    <span>{uploadingBanner ? 'Uploading...' : 'Choose file'}</span>
+                    <span>{uploadingBanner ? 'Uploading...' : 'Choose image'}</span>
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
                       disabled={uploadingBanner}
-                      onChange={(e) => handleImageUpload(e, 'banner')}
+                      onChange={(e) => handleSelectFile(e, 'banner')}
                       className="hidden"
                     />
                   </label>
                   {bannerUrl && (
                     <div className="mt-2 flex items-center gap-2">
                       <div className="w-12 h-5 rounded overflow-hidden border border-purple-500 bg-cover bg-center" style={{ backgroundImage: `url(${bannerUrl})` }} />
-                      <span className="text-[10px] text-emerald-400 font-semibold">Banner Ready</span>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Ready (1280×480)</span>
                     </div>
                   )}
                 </div>
@@ -297,6 +309,15 @@ export default function ProfileView({ username, onSelectPlaylist }) {
           </div>
         </div>
       )}
+
+      {/* Image Crop & Retina Preview Modal */}
+      <ImageCropModal
+        isOpen={cropModal.isOpen}
+        imageFile={cropModal.file}
+        cropType={cropModal.type}
+        onClose={() => setCropModal({ isOpen: false, file: null, type: 'avatar' })}
+        onApply={handleApplyCrop}
+      />
 
       {/* Public Playlists Showcase */}
       {profile.playlists?.length > 0 && (
