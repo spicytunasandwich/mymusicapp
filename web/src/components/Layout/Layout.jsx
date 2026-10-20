@@ -30,6 +30,7 @@ export default function Layout({
           setActiveView={setActiveView}
           onOpenImport={onOpenImport}
           onSelectPlaylist={onSelectPlaylist}
+          onOpenProfile={onOpenProfile}
           isCollapsed={isSidebarCollapsed}
           toggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           isMobileOpen={isMobileSidebarOpen}

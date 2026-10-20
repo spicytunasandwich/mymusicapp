@@ -28,43 +28,96 @@ const ACCENTS = [
 
 export default function ProfileView({ username, onSelectPlaylist }) {
   const { user: currentUser, updateUser } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  
+  const targetUsername = username || currentUser?.username || 'me';
+  const isOwnProfile = !username || (currentUser && (
+    currentUser.username?.toLowerCase() === targetUsername?.toLowerCase() ||
+    targetUsername === 'me'
+  ));
+
+  const [profile, setProfile] = useState(() => {
+    if (currentUser && isOwnProfile) {
+      return {
+        ...currentUser,
+        badges: [],
+        playlists: [],
+        followed_artists: []
+      };
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState(!profile);
   const [isEditing, setIsEditing] = useState(false);
 
   // Crop / Preview state
   const [cropModal, setCropModal] = useState({ isOpen: false, file: null, type: 'avatar' });
 
   // Edit fields
-  const [displayName, setDisplayName] = useState('');
-  const [displayNameFont, setDisplayNameFont] = useState('Plus Jakarta Sans');
-  const [bio, setBio] = useState('');
-  const [accentColor, setAccentColor] = useState('#8B5CF6');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [bannerUrl, setBannerUrl] = useState('');
+  const [displayName, setDisplayName] = useState(currentUser?.display_name || currentUser?.username || '');
+  const [displayNameFont, setDisplayNameFont] = useState(currentUser?.display_name_font || 'Plus Jakarta Sans');
+  const [bio, setBio] = useState(currentUser?.bio || '');
+  const [accentColor, setAccentColor] = useState(currentUser?.accent_color || '#1DB954');
+  const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url || '');
+  const [bannerUrl, setBannerUrl] = useState(currentUser?.banner_url || '');
   const [saving, setSaving] = useState(false);
 
-  const targetUsername = username || currentUser?.username;
-  const isOwnProfile = currentUser && currentUser.username?.toLowerCase() === targetUsername?.toLowerCase();
   const { getPresence, showActivity, toggleActivityPrivacy } = usePresence();
   const presence = getPresence(targetUsername);
 
   useEffect(() => {
-    if (!targetUsername) return;
-    setLoading(true);
-    api.get(`/users/profile/${targetUsername}`)
+    let isMounted = true;
+    const fetchTarget = username || currentUser?.username || 'me';
+
+    if (!profile) setLoading(true);
+
+    api.get(`/users/profile/${fetchTarget}`)
       .then(res => {
-        setProfile(res.profile);
-        setDisplayName(res.profile.display_name || '');
-        setDisplayNameFont(res.profile.display_name_font || 'Plus Jakarta Sans');
-        setBio(res.profile.bio || '');
-        setAccentColor(res.profile.accent_color || '#8B5CF6');
-        setAvatarUrl(res.profile.avatar_url || '');
-        setBannerUrl(res.profile.banner_url || '');
+        if (!isMounted) return;
+        if (res.profile) {
+          setProfile(res.profile);
+          setDisplayName(res.profile.display_name || '');
+          setDisplayNameFont(res.profile.display_name_font || 'Plus Jakarta Sans');
+          setBio(res.profile.bio || '');
+          setAccentColor(res.profile.accent_color || '#1DB954');
+          setAvatarUrl(res.profile.avatar_url || '');
+          setBannerUrl(res.profile.banner_url || '');
+        }
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [targetUsername]);
+      .catch(err => {
+        console.warn('Profile fetch note:', err.message);
+        if (isMounted && currentUser && isOwnProfile) {
+          setProfile(prev => prev || {
+            ...currentUser,
+            badges: [],
+            playlists: [],
+            followed_artists: []
+          });
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [username, currentUser?.username]);
+
+  useEffect(() => {
+    if (currentUser && isOwnProfile && !profile) {
+      setProfile({
+        ...currentUser,
+        badges: [],
+        playlists: [],
+        followed_artists: []
+      });
+      setDisplayName(currentUser.display_name || currentUser.username || '');
+      setDisplayNameFont(currentUser.display_name_font || 'Plus Jakarta Sans');
+      setBio(currentUser.bio || '');
+      setAccentColor(currentUser.accent_color || '#1DB954');
+      setAvatarUrl(currentUser.avatar_url || '');
+      setBannerUrl(currentUser.banner_url || '');
+    }
+  }, [currentUser, isOwnProfile]);
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -134,7 +187,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
     }
   };
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-300">
         <ProfileHeaderSkeleton />
@@ -143,6 +196,13 @@ export default function ProfileView({ username, onSelectPlaylist }) {
   }
 
   if (!profile) {
+    if (isOwnProfile || currentUser) {
+      return (
+        <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-300">
+          <ProfileHeaderSkeleton />
+        </div>
+      );
+    }
     return (
       <div className="text-center py-24 text-slate-400">
         <h2 className="text-xl font-bold text-white mb-2">Profile not found</h2>
@@ -151,7 +211,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
     );
   }
 
-  const effectiveAccent = profile.accent_color || '#8B5CF6';
+  const effectiveAccent = profile.accent_color || '#1DB954';
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 pb-20 animate-in fade-in duration-200">

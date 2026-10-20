@@ -11,6 +11,7 @@ export default function Sidebar({
   setActiveView,
   onOpenImport,
   onSelectPlaylist,
+  onOpenProfile,
   isCollapsed = false,
   toggleCollapse,
   isMobileOpen = false,
@@ -268,7 +269,14 @@ export default function Sidebar({
           {isAuthenticated && user ? (
             <div className="pt-2 mt-auto border-t border-white/5 shrink-0">
               <button
-                onClick={() => handleNavClick('profile')}
+                onClick={() => {
+                  if (onOpenProfile && user.username) {
+                    onOpenProfile(user.username);
+                  } else {
+                    handleNavClick('profile');
+                  }
+                  if (isMobileOpen) onCloseMobile?.();
+                }}
                 className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-[#1a1a1a] transition text-left group"
               >
                 <div className="relative shrink-0">

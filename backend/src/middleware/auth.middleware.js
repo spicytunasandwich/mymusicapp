@@ -38,7 +38,8 @@ async function optionalAuth(req, res, next) {
       const token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_audira_music_2026_change_in_prod');
       const result = await pool.query(
-        `SELECT id, email, username, display_name, avatar_url FROM users WHERE id = $1`,
+        `SELECT id, email, username, display_name, display_name_font, bio, avatar_url, banner_url, accent_color, is_verified, created_at
+         FROM users WHERE id = $1`,
         [decoded.userId]
       );
       if (result.rows.length > 0) {

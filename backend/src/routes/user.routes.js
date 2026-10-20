@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
-const { requireAuth } = require('../middleware/auth.middleware');
+const { requireAuth, optionalAuth } = require('../middleware/auth.middleware');
 const { uploadSingleImage } = require('../middleware/upload.middleware');
 
-// Public Profile
-router.get('/profile/:username', userController.getPublicProfile);
+// Public Profile & Self Profile Resolution
+router.get('/profile', optionalAuth, userController.getPublicProfile);
+router.get('/profile/:username', optionalAuth, userController.getPublicProfile);
 
 // Authenticated Profile Updates
 router.patch('/profile', requireAuth, userController.updateProfile);

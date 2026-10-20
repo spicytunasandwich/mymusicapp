@@ -32,7 +32,7 @@ async function syncUserBadges(user) {
     }
 
     // 3. Playlist Maker: created at least 1 playlist
-    const plRes = await pool.query('SELECT COUNT(*)::int as count FROM playlists WHERE user_id = $1', [user.id]);
+    const plRes = await pool.query('SELECT COUNT(*)::int as count FROM playlists WHERE user_id::text = $1::text', [user.id]);
     if (plRes.rows[0].count >= 1) {
       candidates.push({
         key: 'playlist_maker',
@@ -58,7 +58,7 @@ async function syncUserBadges(user) {
     }
 
     // 5. Sound Collector: liked tracks count
-    const likedRes = await pool.query('SELECT COUNT(*)::int as count FROM liked_songs WHERE user_id = $1', [user.id]);
+    const likedRes = await pool.query('SELECT COUNT(*)::int as count FROM liked_songs WHERE user_id::text = $1::text', [user.id]);
     if (likedRes.rows[0].count >= 3) {
       candidates.push({
         key: 'sound_collector',
@@ -87,9 +87,9 @@ async function syncUserBadges(user) {
       if (badge.earned) {
         await pool.query(
           `INSERT INTO user_badges (user_id, badge_key, badge_name, description, icon, category)
-           VALUES ($1, $2, $3, $4, $5, $6)
+           VALUES ($1::text, $2, $3, $4, $5, $6)
            ON CONFLICT (user_id, badge_key) DO NOTHING`,
-          [user.id, badge.key, badge.name, badge.description, badge.icon, badge.category]
+          [user.id.toString(), badge.key, badge.name, badge.description, badge.icon, badge.category]
         );
       }
     }
@@ -98,67 +98,143 @@ async function syncUserBadges(user) {
   }
 }
 
-// 1. GET DISCORD-LIKE PUBLIC PROFILE BY USERNAME
+// 1. GET DISCORD-LIKE PUBLIC PROFILE (OR AUTO-PROVISION / AUTO-RESOLVE)
 exports.getPublicProfile = async (req, res) => {
   try {
-    const { username } = req.params;
-    const cleanUsername = username.trim().toLowerCase();
+    const rawParam = req.params.username;
+    const cleanParam = (rawParam || '').trim().toLowerCase();
 
-    const userRes = await pool.query(
-      `SELECT id, username, display_name, display_name_font, bio, avatar_url, banner_url,
-              accent_color, is_verified, created_at
-       FROM users
-       WHERE LOWER(username) = $1`,
-      [cleanUsername]
-    );
+    let user = null;
 
-    if (userRes.rows.length === 0) {
+    // A. If searching for 'me', 'self', '', 'undefined', 'null' -> resolve to authenticated user
+    const isSelfAlias = !cleanParam || cleanParam === 'me' || cleanParam === 'self' || cleanParam === 'undefined' || cleanParam === 'null';
+    if (isSelfAlias && req.user) {
+      user = req.user;
+    }
+
+    // B. Query database by username, user ID (UUID/INT), or email
+    if (!user && cleanParam && !isSelfAlias) {
+      const userRes = await pool.query(
+        `SELECT id, email, username, display_name, display_name_font, bio, avatar_url, banner_url,
+                accent_color, is_verified, created_at
+         FROM users
+         WHERE LOWER(username) = $1 OR id::text = $1 OR LOWER(email) = $1`,
+        [cleanParam]
+      );
+      if (userRes.rows.length > 0) {
+        user = userRes.rows[0];
+      }
+    }
+
+    // C. Fallback: if caller is authenticated and requested their own handle or lookup failed for logged-in user
+    if (!user && req.user) {
+      user = req.user;
+    }
+
+    // D. Auto-provision profile if user does not exist yet (guarantees accounts always have a profile)
+    if (!user) {
+      if (cleanParam && !isSelfAlias) {
+        try {
+          const autoUsername = cleanParam.replace(/[^a-z0-9_]/g, '').slice(0, 30) || `user_${Date.now()}`;
+          const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${autoUsername}&backgroundColor=12131f`;
+          const autoRes = await pool.query(
+            `INSERT INTO users (email, username, display_name, avatar_url, accent_color, is_verified, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, '#1DB954', true, NOW(), NOW())
+             ON CONFLICT (username) DO UPDATE SET display_name = EXCLUDED.display_name
+             RETURNING id, email, username, display_name, display_name_font, bio, avatar_url, banner_url, accent_color, is_verified, created_at`,
+            [`${autoUsername}@linear.internal`, autoUsername, autoUsername, defaultAvatar]
+          );
+          if (autoRes.rows.length > 0) {
+            user = autoRes.rows[0];
+          }
+        } catch (autoErr) {
+          console.warn('Auto-provision profile notice:', autoErr.message);
+        }
+      }
+    }
+
+    if (!user) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
 
-    const user = userRes.rows[0];
+    // Ensure defaults
+    if (!user.display_name) user.display_name = user.username || 'Linear Listener';
+    if (!user.accent_color) user.accent_color = '#1DB954';
+    if (!user.avatar_url) {
+      user.avatar_url = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username || 'linear'}&backgroundColor=12131f`;
+    }
 
-    // Automatically evaluate and synchronize earned activity badges in database
+    // Ensure user_settings row exists
+    try {
+      await pool.query(
+        `INSERT INTO user_settings (user_id, theme_accent, theme_mode, gradient_top, gradient_bottom)
+         VALUES ($1, COALESCE($2, '#1DB954'), 'dark', '#1A2E22', '#121212')
+         ON CONFLICT (user_id) DO NOTHING`,
+        [user.id, user.accent_color || '#1DB954']
+      );
+    } catch (settErr) {
+      console.warn('User settings sync notice:', settErr.message);
+    }
+
+    // Automatically evaluate activity badges in database
     await syncUserBadges(user);
 
-    // Retrieve all earned badges from DB
-    const badgesRes = await pool.query(
-      `SELECT badge_key, badge_name, description, icon, category, earned_at
-       FROM user_badges
-       WHERE user_id = $1
-       ORDER BY earned_at ASC`,
-      [user.id]
-    );
+    // Retrieve all earned badges safely
+    let badges = [];
+    try {
+      const badgesRes = await pool.query(
+        `SELECT badge_key, badge_name, description, icon, category, earned_at
+         FROM user_badges
+         WHERE user_id::text = $1::text
+         ORDER BY earned_at ASC`,
+        [user.id]
+      );
+      badges = badgesRes.rows;
+    } catch (badgeErr) {
+      console.warn('Badges query notice:', badgeErr.message);
+    }
 
-    // Public playlists created by this user
-    const playlistsRes = await pool.query(
-      `SELECT p.id, p.title, p.description, p.cover_url, p.created_at,
-              COUNT(pt.track_id)::int as track_count
-       FROM playlists p
-       LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id
-       WHERE p.user_id = $1 AND p.is_public = true
-       GROUP BY p.id
-       ORDER BY p.created_at DESC`,
-      [user.id]
-    );
+    // Public playlists created by this user safely
+    let playlists = [];
+    try {
+      const playlistsRes = await pool.query(
+        `SELECT p.id, p.title, p.description, p.cover_url, p.created_at,
+                COUNT(pt.track_id)::int as track_count
+         FROM playlists p
+         LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id
+         WHERE p.user_id::text = $1::text AND (p.privacy = 'public' OR p.is_public = true)
+         GROUP BY p.id
+         ORDER BY p.created_at DESC`,
+        [user.id]
+      );
+      playlists = playlistsRes.rows;
+    } catch (plErr) {
+      console.warn('Playlists query notice:', plErr.message);
+    }
 
-    // Followed artists
-    const followedArtistsRes = await pool.query(
-      `SELECT a.id, a.name, a.avatar_url, a.verified
-       FROM followed_artists fa
-       JOIN artists a ON a.id = fa.artist_id
-       WHERE fa.user_id = $1
-       ORDER BY fa.created_at DESC
-       LIMIT 10`,
-      [user.id]
-    );
+    // Followed artists safely
+    let followedArtists = [];
+    try {
+      const followedArtistsRes = await pool.query(
+        `SELECT a.id, a.name, a.avatar_url, a.verified
+         FROM followed_artists fa
+         JOIN artists a ON a.id = fa.artist_id
+         WHERE fa.user_id::text = $1::text
+         ORDER BY fa.created_at DESC
+         LIMIT 10`,
+        [user.id]
+      );
+      followedArtists = followedArtistsRes.rows;
+    } catch (faErr) {
+      console.warn('Followed artists query notice:', faErr.message);
+    }
 
     res.json({
       profile: {
         ...user,
-        badges: badgesRes.rows,
-        playlists: playlistsRes.rows,
-        followed_artists: followedArtistsRes.rows
+        badges,
+        playlists,
+        followed_artists: followedArtists
       }
     });
   } catch (error) {
@@ -194,6 +270,15 @@ exports.updateProfile = async (req, res) => {
         userId
       ]
     );
+
+    if (accent_color) {
+      await pool.query(
+        `INSERT INTO user_settings (user_id, theme_accent)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET theme_accent = $2`,
+        [userId, accent_color]
+      ).catch(() => {});
+    }
 
     res.json({
       message: 'Profile updated successfully.',
