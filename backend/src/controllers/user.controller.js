@@ -1,4 +1,102 @@
+const fs = require('fs');
 const { pool } = require('../config/db');
+
+// Activity-based badge evaluator & synchronizer
+async function syncUserBadges(user) {
+  if (!user || !user.id) return;
+  try {
+    const candidates = [];
+
+    // 1. Early Adopter: joined early
+    candidates.push({
+      key: 'early_adopter',
+      name: 'Early Adopter',
+      description: 'Joined Audira during platform launch.',
+      icon: 'Sparkles',
+      category: 'milestone',
+      earned: true
+    });
+
+    // 2. Old Listener: registered community member
+    const createdAt = new Date(user.created_at).getTime();
+    const daysSinceJoined = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+    if (daysSinceJoined >= 0.1) {
+      candidates.push({
+        key: 'old_listener',
+        name: 'Old Listener',
+        description: 'Active community member with listening history.',
+        icon: 'Headphones',
+        category: 'loyalty',
+        earned: true
+      });
+    }
+
+    // 3. Playlist Maker: created at least 1 playlist
+    const plRes = await pool.query('SELECT COUNT(*)::int as count FROM playlists WHERE user_id = $1', [user.id]);
+    if (plRes.rows[0].count >= 1) {
+      candidates.push({
+        key: 'playlist_maker',
+        name: 'Playlist Maker',
+        description: 'Curated and shared personalized music playlists.',
+        icon: 'Music2',
+        category: 'creator',
+        earned: true
+      });
+    }
+
+    // 4. Night Owl: streams or active during late-night hours (10 PM - 5 AM)
+    const currentHour = new Date().getHours();
+    if (currentHour >= 22 || currentHour <= 5) {
+      candidates.push({
+        key: 'night_owl',
+        name: 'Night Owl',
+        description: 'Streams deep into the late-night and midnight hours.',
+        icon: 'Moon',
+        category: 'habit',
+        earned: true
+      });
+    }
+
+    // 5. Sound Collector: liked tracks count
+    const likedRes = await pool.query('SELECT COUNT(*)::int as count FROM liked_songs WHERE user_id = $1', [user.id]);
+    if (likedRes.rows[0].count >= 3) {
+      candidates.push({
+        key: 'sound_collector',
+        name: 'Sound Collector',
+        description: 'Saved 3 or more favorite tracks to personal library.',
+        icon: 'Heart',
+        category: 'collector',
+        earned: true
+      });
+    }
+
+    // 6. Verified Pioneer: email verified
+    if (user.is_verified) {
+      candidates.push({
+        key: 'verified_pioneer',
+        name: 'Verified Pioneer',
+        description: 'Successfully verified authentic Audira account.',
+        icon: 'ShieldCheck',
+        category: 'trust',
+        earned: true
+      });
+    }
+
+    // Insert earned badges if not yet recorded
+    for (const badge of candidates) {
+      if (badge.earned) {
+        await pool.query(
+          `INSERT INTO user_badges (user_id, badge_key, badge_name, description, icon, category)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (user_id, badge_key) DO NOTHING`,
+          [user.id, badge.key, badge.name, badge.description, badge.icon, badge.category]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('Badge sync note:', err.message);
+  }
+}
 
 // 1. GET DISCORD-LIKE PUBLIC PROFILE BY USERNAME
 exports.getPublicProfile = async (req, res) => {
@@ -19,6 +117,18 @@ exports.getPublicProfile = async (req, res) => {
     }
 
     const user = userRes.rows[0];
+
+    // Automatically evaluate and synchronize earned activity badges in database
+    await syncUserBadges(user);
+
+    // Retrieve all earned badges from DB
+    const badgesRes = await pool.query(
+      `SELECT badge_key, badge_name, description, icon, category, earned_at
+       FROM user_badges
+       WHERE user_id = $1
+       ORDER BY earned_at ASC`,
+      [user.id]
+    );
 
     // Public playlists created by this user
     const playlistsRes = await pool.query(
@@ -46,6 +156,7 @@ exports.getPublicProfile = async (req, res) => {
     res.json({
       profile: {
         ...user,
+        badges: badgesRes.rows,
         playlists: playlistsRes.rows,
         followed_artists: followedArtistsRes.rows
       }
@@ -166,12 +277,21 @@ exports.updateSettings = async (req, res) => {
   }
 };
 
-// 5. UPLOAD MEDIA (Avatar, Banner, Playlist Cover)
+// 5. UPLOAD MEDIA (Avatar, Banner, Playlist Cover) with Permanent Database Persistence
 exports.uploadMedia = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded.' });
     }
+
+    // Persist file binary into PostgreSQL media_uploads so Render deploys / container wipes NEVER delete avatars/banners
+    const fileBuffer = fs.readFileSync(req.file.path);
+    await pool.query(
+      `INSERT INTO media_uploads (filename, mime_type, data)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (filename) DO UPDATE SET data = $3, mime_type = $2`,
+      [req.file.filename, req.file.mimetype, fileBuffer]
+    );
 
     const host = req.get('host');
     const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : req.protocol);

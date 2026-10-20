@@ -27,6 +27,28 @@ async function initDbColumns() {
       ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_top VARCHAR(16) DEFAULT '#1A102E';
       ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_bottom VARCHAR(16) DEFAULT '#08090E';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name_font VARCHAR(64) DEFAULT 'Plus Jakarta Sans';
+      ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
+      ALTER TABLE users ALTER COLUMN banner_url TYPE TEXT;
+
+      CREATE TABLE IF NOT EXISTS media_uploads (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) UNIQUE NOT NULL,
+        mime_type VARCHAR(100) NOT NULL,
+        data BYTEA NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        badge_key VARCHAR(64) NOT NULL,
+        badge_name VARCHAR(100) NOT NULL,
+        description TEXT NOT NULL,
+        icon VARCHAR(50) NOT NULL,
+        category VARCHAR(50) DEFAULT 'activity',
+        earned_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, badge_key)
+      );
     `);
     console.log('✅ DB auth columns verified (6-digit verification, reset codes, google_id).');
   } catch (err) {

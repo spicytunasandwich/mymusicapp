@@ -258,6 +258,10 @@ export default function Sidebar({
                     src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
                     alt={user.display_name}
                     className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username || 'audira'}`;
+                    }}
                   />
                 </div>
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0B0C14]" />

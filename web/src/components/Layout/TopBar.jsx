@@ -70,7 +70,15 @@ export default function TopBar({ onOpenProfile, onOpenSettings, onToggleMobileSi
                   style={{ borderColor: user.accent_color || '#8B5CF6' }}
                 >
                   {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+                    <img
+                      src={user.avatar_url}
+                      alt={user.display_name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username || 'audira'}`;
+                      }}
+                    />
                   ) : (
                     <UserIcon size={14} className="text-purple-300" />
                   )}
@@ -98,6 +106,10 @@ export default function TopBar({ onOpenProfile, onOpenSettings, onToggleMobileSi
                       src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
                       alt={user.display_name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username || 'audira'}`;
+                      }}
                     />
                   </div>
                   <div className="min-w-0 flex-1">

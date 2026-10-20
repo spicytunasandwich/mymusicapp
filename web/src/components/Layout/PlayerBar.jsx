@@ -231,6 +231,10 @@ export default function PlayerBar() {
                   src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
                   alt={user.display_name}
                   className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username || 'audira'}`;
+                  }}
                 />
               </div>
             </div>

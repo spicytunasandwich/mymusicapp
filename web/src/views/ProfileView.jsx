@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   User, Calendar, Edit3, Music2, Camera, Check, X,
-  ShieldCheck, Sparkles, Award, Headphones
+  ShieldCheck, Sparkles, Award, Headphones, Moon, Heart
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,15 @@ import ImageCropModal from '../components/Common/ImageCropModal';
 import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
 import ColorPicker from '../components/Common/ColorPicker';
 import FontPicker from '../components/Common/FontPicker';
+
+const BADGE_ICONS = {
+  early_adopter: { icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/30' },
+  old_listener: { icon: Headphones, color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/30' },
+  playlist_maker: { icon: Music2, color: 'text-cyan-400', bg: 'bg-cyan-400/10 border-cyan-400/30' },
+  night_owl: { icon: Moon, color: 'text-indigo-400', bg: 'bg-indigo-400/10 border-indigo-400/30' },
+  sound_collector: { icon: Heart, color: 'text-pink-400', bg: 'bg-pink-400/10 border-pink-400/30' },
+  verified_pioneer: { icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/30' }
+};
 
 const ACCENTS = [
   '#8B5CF6', '#7C3AED', '#3B82F6', '#06B6D4',
@@ -176,9 +185,13 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 style={{ border: `3.5px solid ${effectiveAccent}` }}
               >
                 <img
-                  src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
+                  src={profile.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'audira'}`}
                   alt={profile.display_name}
                   className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'audira'}`;
+                  }}
                 />
               </div>
               {/* Discord-style Online status dot */}
@@ -204,16 +217,50 @@ export default function ProfileView({ username, onSelectPlaylist }) {
               </div>
               <p className="text-xs font-semibold text-slate-400">@{profile.username}</p>
 
-              {/* Discord-Style Role Badges */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
-                <span className="discord-badge">
-                  <Headphones size={13} className="text-purple-400" />
-                  <span>Listener</span>
-                </span>
-                <span className="discord-badge">
-                  <Sparkles size={13} className="text-amber-400" />
-                  <span>Early Adopter</span>
-                </span>
+              {/* Badges Row (replaces tags with interactive icon badges & tooltips) */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1.5">
+                {(profile.badges && profile.badges.length > 0 ? profile.badges : [
+                  { badge_key: 'early_adopter', badge_name: 'Early Adopter', description: 'Joined Audira during platform launch.', icon: 'Sparkles' },
+                  { badge_key: 'old_listener', badge_name: 'Old Listener', description: 'Active community member with listening history.', icon: 'Headphones' }
+                ]).map((badge) => {
+                  const meta = BADGE_ICONS[badge.badge_key] || {
+                    icon: Award,
+                    color: 'text-purple-400',
+                    bg: 'bg-purple-400/10 border-purple-400/30'
+                  };
+                  const IconComp = meta.icon;
+
+                  return (
+                    <div key={badge.badge_key} className="relative group">
+                      <div
+                        className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all duration-200 cursor-pointer shadow-sm hover:scale-115 hover:shadow-lg ${meta.bg}`}
+                        tabIndex={0}
+                        aria-label={badge.badge_name}
+                      >
+                        <IconComp size={15} className={meta.color} />
+                      </div>
+
+                      {/* Discord/Steam Style Glass Tooltip on Hover */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none transition-all duration-150">
+                        <div className="bg-[#121320]/95 backdrop-blur-md border border-white/15 px-3 py-2 rounded-xl shadow-2xl text-center min-w-[150px] max-w-[220px]">
+                          <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                            <IconComp size={13} className={meta.color} />
+                            <span className="text-white text-xs font-black">{badge.badge_name}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 leading-snug">
+                            {badge.description}
+                          </p>
+                          <div className="mt-1 pt-1 border-t border-white/10 text-[9px] text-slate-500 font-semibold uppercase tracking-wider">
+                            Activity Badge
+                          </div>
+                        </div>
+                        {/* Tooltip caret */}
+                        <div className="w-2 h-2 bg-[#121320] border-r border-b border-white/15 rotate-45 -mt-1" />
+                      </div>
+                    </div>
+                  );
+                })}
+
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pl-2">
                   <Calendar size={13} />
                   <span>Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>

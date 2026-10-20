@@ -32,8 +32,37 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
-// Static assets with absolute directory paths
+// Static assets with absolute directory paths & PostgreSQL backup recovery
+const fs = require('fs');
 app.use('/public', express.static(path.join(__dirname, '../public')));
+
+// Permanent media persistence: if ephemeral disk was wiped by redeploy, restore instantly from DB
+app.get('/uploads/:filename', async (req, res, next) => {
+  const filePath = path.join(__dirname, '../uploads', req.params.filename);
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  try {
+    const { pool } = require('./config/db');
+    const result = await pool.query(
+      'SELECT mime_type, data FROM media_uploads WHERE filename = $1',
+      [req.params.filename]
+    );
+    if (result.rows.length > 0) {
+      const { mime_type, data } = result.rows[0];
+      const uploadsDir = path.join(__dirname, '../uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      fs.writeFileSync(filePath, data);
+      res.setHeader('Content-Type', mime_type);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(data);
+    }
+  } catch (err) {
+    console.warn('DB media recovery note:', err.message);
+  }
+  next();
+});
+
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Base API v1 Contract
