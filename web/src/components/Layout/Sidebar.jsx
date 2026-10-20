@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Home, Search, Library, Plus, DownloadCloud,
-  Music2, ChevronLeft, ChevronRight, Heart, X, Sparkles
+  Music2, ChevronLeft, ChevronRight, Heart, X, Sparkles, HardDrive
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
@@ -209,6 +209,24 @@ export default function Sidebar({
                   <p className="text-xs text-[#b3b3b3] truncate">
                     Playlist • {libraryData.liked_songs_count || 0} songs
                   </p>
+                </div>
+              )}
+            </button>
+
+            {/* Local Files (Offline Storage - Riff Engine) */}
+            <button
+              onClick={() => handleNavClick('local')}
+              className={`w-full flex items-center gap-3 p-2 rounded-md transition text-left group ${
+                activeView === 'local' ? 'bg-[#282828]' : 'hover:bg-[#1a1a1a]'
+              }`}
+            >
+              <div className="w-12 h-12 rounded-md bg-[#242424] border border-white/5 flex items-center justify-center shrink-0 shadow text-[#1DB954] group-hover:scale-105 transition-transform">
+                <HardDrive size={20} />
+              </div>
+              {(!isCollapsed || isMobileOpen) && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white truncate">Local Files</p>
+                  <p className="text-xs text-[#b3b3b3] truncate">Offline storage</p>
                 </div>
               )}
             </button>

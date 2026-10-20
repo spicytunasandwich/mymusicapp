@@ -73,8 +73,9 @@ function AppContent({
             />
           )}
 
-          {activeView === 'library' && (
+          {(activeView === 'library' || activeView === 'local') && (
             <LibraryView
+              defaultTab={activeView === 'local' ? 'local' : 'all'}
               onSelectPlaylist={handleSelectPlaylist}
               onSelectLiked={() => setActiveView('liked')}
             />

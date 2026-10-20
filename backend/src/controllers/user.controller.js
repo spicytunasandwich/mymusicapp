@@ -247,22 +247,32 @@ exports.getPublicProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { display_name, display_name_font, bio, accent_color, avatar_url, banner_url } = req.body;
+    const { username, display_name, display_name_font, bio, accent_color, avatar_url, banner_url } = req.body;
+
+    let cleanUsername = null;
+    if (username && typeof username === 'string') {
+      const sanitized = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (sanitized.length >= 3) {
+        cleanUsername = sanitized;
+      }
+    }
 
     const result = await pool.query(
       `UPDATE users
-       SET display_name = COALESCE($1, display_name),
-           display_name_font = COALESCE($2, display_name_font),
-           bio = COALESCE($3, bio),
-           accent_color = COALESCE($4, accent_color),
-           avatar_url = COALESCE($5, avatar_url),
-           banner_url = COALESCE($6, banner_url),
+       SET username = COALESCE($1, username),
+           display_name = COALESCE($2, display_name),
+           display_name_font = COALESCE($3, display_name_font),
+           bio = COALESCE($4, bio),
+           accent_color = COALESCE($5, accent_color),
+           avatar_url = COALESCE($6, avatar_url),
+           banner_url = COALESCE($7, banner_url),
            updated_at = NOW()
-       WHERE id = $7
+       WHERE id = $8
        RETURNING id, email, username, display_name, display_name_font, bio, avatar_url, banner_url, accent_color, is_verified, updated_at`,
       [
-        display_name?.trim(),
-        display_name_font?.trim(),
+        cleanUsername,
+        display_name !== undefined ? display_name.trim() : null,
+        display_name_font !== undefined ? display_name_font.trim() : null,
         bio !== undefined ? bio.trim() : null,
         accent_color,
         avatar_url,

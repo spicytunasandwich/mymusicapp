@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { extractPlaylistId, fetchSpotifyPlaylist } = require('../utils/spotify');
+const { resolveTrackAudio } = require('../utils/audioResolver');
 
 function sanitizeTitle(str) {
   if (!str) return '';
@@ -94,8 +95,25 @@ exports.importSpotifyPlaylist = async (req, res) => {
             artistId = newArt.rows[0].id;
           }
 
-          // Audio URL: Spotify 30s preview URL or direct audio stream fallback
-          const audioStreamUrl = spTrack.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+          // Resolve actual audio stream from online resolver (like Riff)
+          let audioStreamUrl = spTrack.preview_url;
+          let trackCover = spTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300';
+          let trackDuration = Math.max(30, Math.round((spTrack.duration_ms || 180000) / 1000));
+
+          if (!audioStreamUrl) {
+            try {
+              const resolved = await resolveTrackAudio(spTrack.title, spTrack.artist);
+              if (resolved) {
+                if (resolved.audio_url) audioStreamUrl = resolved.audio_url;
+                if (resolved.cover_url) trackCover = resolved.cover_url;
+                if (resolved.duration) trackDuration = resolved.duration;
+              }
+            } catch (_) {}
+          }
+
+          if (!audioStreamUrl) {
+            audioStreamUrl = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+          }
 
           const insTrack = await pool.query(
             `INSERT INTO tracks (title, artist_id, duration, audio_url, cover_url, spotify_id, preview_url, stream_count)
@@ -104,9 +122,9 @@ exports.importSpotifyPlaylist = async (req, res) => {
             [
               spTrack.title,
               artistId,
-              Math.max(30, Math.round((spTrack.duration_ms || 180000) / 1000)),
+              trackDuration,
               audioStreamUrl,
-              spTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300',
+              trackCover,
               spTrack.spotify_id || null,
               spTrack.preview_url || null
             ]

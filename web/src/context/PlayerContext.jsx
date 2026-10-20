@@ -24,6 +24,18 @@ export function PlayerProvider({ children }) {
 
   // Audio source: 'spotify' | 'local' | 'stream' | 'preview'
   const [trackSource, setTrackSource] = useState('stream');
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Spotify Web Playback SDK state
   const [spotifyToken, setSpotifyToken] = useState(() => localStorage.getItem('linear_spotify_token') || '');
@@ -275,19 +287,23 @@ export function PlayerProvider({ children }) {
       }
     }
 
-    // 3. Fallback: Stream via HTML5 Audio (30s preview or Linear Cloud Stream)
+    // 3. Play via HTML5 Audio (Supports local offline blobs & online streams)
     if (spotifyPlayerRef.current) spotifyPlayerRef.current.pause();
     isPlayingSpotifyRef.current = false;
 
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
-    const streamUrl = track.preview_url || (track.audio_url?.startsWith('http')
-      ? track.audio_url
-      : `${baseUrl}/music/tracks/${track.id}/stream`);
+    let streamUrl = track.audio_url || track.preview_url;
+    if (!streamUrl || (!streamUrl.startsWith('http') && !streamUrl.startsWith('blob:'))) {
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
+      streamUrl = `${baseUrl}/music/tracks/${track.id}/stream`;
+    }
 
-    if (track.preview_url || spotifyId) {
+    if (track.isLocal || streamUrl.startsWith('blob:')) {
+      setTrackSource('local');
+      setSpotifyNotice('');
+    } else if (track.preview_url || spotifyId) {
       setTrackSource(track.preview_url ? 'preview' : 'stream');
       if (!isSpotifyPremium && spotifyId) {
-        setSpotifyNotice('Playing 30s preview. Connect Spotify Premium in Settings for full uncompressed playback.');
+        setSpotifyNotice('Playing uncompressed stream preview. Connect Spotify in Settings to sync with your devices.');
       }
     } else {
       setTrackSource('stream');
@@ -468,6 +484,7 @@ export function PlayerProvider({ children }) {
         repeatMode,
         isLyricsOpen,
         trackSource,
+        isOnline,
         spotifyToken,
         spotifyUser,
         isSpotifyReady,

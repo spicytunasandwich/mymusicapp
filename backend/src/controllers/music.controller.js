@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/db');
 const { parseLrc } = require('../utils/lrcParser');
+const { searchOnlineTracks } = require('../utils/audioResolver');
 
 // 1. HOME FEED
 exports.getHomeFeed = async (req, res) => {
@@ -137,8 +138,60 @@ exports.search = async (req, res) => {
       )
     ]);
 
+    let tracks = tracksRes.rows;
+
+    // If local catalog has few results, query live stream index (like Riff)
+    if (tracks.length < 8) {
+      try {
+        const onlineTracks = await searchOnlineTracks(q, 10);
+        for (const ot of onlineTracks) {
+          if (!tracks.some(t => t.title.toLowerCase() === ot.title.toLowerCase())) {
+            let artistId;
+            const aRes = await pool.query('SELECT id FROM artists WHERE LOWER(name) = LOWER($1)', [ot.artist]);
+            if (aRes.rows.length > 0) {
+              artistId = aRes.rows[0].id;
+            } else {
+              const na = await pool.query('INSERT INTO artists (name, avatar_url) VALUES ($1, $2) RETURNING id', [ot.artist, ot.artist_avatar || ot.cover_url]);
+              artistId = na.rows[0].id;
+            }
+
+            const ins = await pool.query(
+              `INSERT INTO tracks (title, artist_id, duration, audio_url, cover_url, preview_url, stream_count)
+               VALUES ($1, $2, $3, $4, $5, $6, 1)
+               ON CONFLICT DO NOTHING
+               RETURNING id, title, duration, audio_url, cover_url, preview_url, stream_count`,
+              [ot.title, artistId, ot.duration, ot.audio_url, ot.cover_url, ot.preview_url]
+            );
+
+            if (ins.rows.length > 0) {
+              tracks.push({
+                ...ins.rows[0],
+                artist_id: artistId,
+                artist_name: ot.artist,
+                album_title: ot.album,
+                is_liked: false
+              });
+            } else {
+              tracks.push({
+                id: `online_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                title: ot.title,
+                artist_name: ot.artist,
+                duration: ot.duration,
+                audio_url: ot.audio_url,
+                cover_url: ot.cover_url,
+                preview_url: ot.preview_url,
+                is_liked: false
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Online tracks search error:', err.message);
+      }
+    }
+
     res.json({
-      tracks: tracksRes.rows,
+      tracks: tracks,
       artists: artistsRes.rows,
       albums: albumsRes.rows,
       playlists: playlistsRes.rows
