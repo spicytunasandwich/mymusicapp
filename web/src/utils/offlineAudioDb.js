@@ -168,6 +168,24 @@ export async function deleteLocalAudioTrack(id) {
 }
 
 /**
+ * Prepares an offline track for playback by ensuring an active blob URL exists.
+ */
+export function prepareTrackForPlayback(track) {
+  if (!track) return null;
+  let audio_url = track.audio_url || track.blobUrl;
+  if (!audio_url && track.blob) {
+    audio_url = URL.createObjectURL(track.blob);
+  }
+  return {
+    ...track,
+    audio_url,
+    blobUrl: audio_url,
+    source: 'local',
+    isLocal: true
+  };
+}
+
+/**
  * Caches an online playlist for offline viewing and playback.
  */
 export async function cachePlaylistForOffline(playlist) {

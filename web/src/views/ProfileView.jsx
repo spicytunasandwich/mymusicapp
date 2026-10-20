@@ -3,7 +3,7 @@ import {
   User, Calendar, Music2, Camera, Check, X,
   ShieldCheck, Sparkles, Award, Headphones, Moon, Heart,
   Type, Palette, Play, Pause, MessageSquare, Gift, MoreHorizontal,
-  Flame, Disc, ChevronRight, Share2, Plus, Sparkle
+  Flame, Disc, ChevronRight, Share2, Plus
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
