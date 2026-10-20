@@ -5,15 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { usePlayer } from '../context/PlayerContext';
 import ColorPicker from '../components/Common/ColorPicker';
 
-const ACCENTS = [
-  { name: 'Spotify Green', hex: '#1DB954' },
-  { name: 'Emerald Wave', hex: '#1ED760' },
-  { name: 'Electric Violet', hex: '#8B5CF6' },
-  { name: 'Cyber Cyan', hex: '#06B6D4' },
-  { name: 'Neon Pink', hex: '#EC4899' },
-  { name: 'Solar Amber', hex: '#F59E0B' },
-  { name: 'Royal Indigo', hex: '#6366F1' },
-  { name: 'Crimson Rose', hex: '#F43F5E' }
+export const ACCENTS = [
+  { name: 'Spotify Green', hex: '#1DB954', gradient: 'rgba(29, 185, 84, 0.20)' },
+  { name: 'Electric Purple', hex: '#8B5CF6', gradient: 'rgba(139, 92, 246, 0.22)' },
+  { name: 'Cobalt Blue', hex: '#3B82F6', gradient: 'rgba(59, 130, 246, 0.20)' },
+  { name: 'Vivid Red', hex: '#EF4444', gradient: 'rgba(239, 68, 68, 0.20)' },
+  { name: 'Amber Yellow', hex: '#F59E0B', gradient: 'rgba(245, 158, 11, 0.20)' }
 ];
 
 const WIDGET_LABELS = {
@@ -52,11 +49,15 @@ export default function SettingsView() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Apply theme accent & gradient stops to document CSS variables immediately
-  const applyAccentLive = (hex) => {
+  const applyAccentLive = (hex, grad) => {
     setThemeAccent(hex);
+    const topGrad = grad || `${hex}33`;
     document.documentElement.style.setProperty('--audira-accent', hex);
     document.documentElement.style.setProperty('--primary-accent', hex);
     document.documentElement.style.setProperty('--audira-accent-glow', `${hex}59`);
+    document.documentElement.style.setProperty('--audira-gradient-top', topGrad);
+    localStorage.setItem('audira_theme_accent', hex);
+    localStorage.setItem('audira_gradient_top', topGrad);
   };
 
   const applyGradientLive = (top, bottom) => {
@@ -178,6 +179,31 @@ export default function SettingsView() {
             >
               Gradient Bottom
             </button>
+          </div>
+        </div>
+
+        {/* 5 Signature Theme Presets */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 mb-2">Signature Color Accents</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {ACCENTS.map((item) => (
+              <button
+                key={item.hex}
+                type="button"
+                onClick={() => applyAccentLive(item.hex, item.gradient)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition ${
+                  themeAccent.toLowerCase() === item.hex.toLowerCase()
+                    ? 'border-white text-white shadow-lg scale-105'
+                    : 'border-white/10 text-slate-400 hover:text-white hover:border-white/30'
+                }`}
+                style={{
+                  backgroundColor: themeAccent.toLowerCase() === item.hex.toLowerCase() ? item.gradient : '#121212'
+                }}
+              >
+                <div className="w-3.5 h-3.5 rounded-full shadow-sm" style={{ backgroundColor: item.hex }} />
+                <span>{item.name}</span>
+              </button>
+            ))}
           </div>
         </div>
 

@@ -287,29 +287,26 @@ export function PlayerProvider({ children }) {
       }
     }
 
-    // 3. Play via HTML5 Audio (Supports local offline blobs & online streams)
+    // 3. Play via HTML5 Audio (Supports local offline blobs & full disk streams)
     if (spotifyPlayerRef.current) spotifyPlayerRef.current.pause();
     isPlayingSpotifyRef.current = false;
 
-    let streamUrl = track.audio_url || track.preview_url;
-    if (!streamUrl || (!streamUrl.startsWith('http') && !streamUrl.startsWith('blob:'))) {
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
-      streamUrl = `${baseUrl}/music/tracks/${track.id}/stream`;
-    }
+    let streamUrl = track.audio_url;
 
-    if (track.isLocal || streamUrl.startsWith('blob:')) {
+    // Check if it's a local offline blob or file URL
+    if (track.isLocal || track.source === 'local' || streamUrl?.startsWith('blob:') || streamUrl?.startsWith('file://')) {
       setTrackSource('local');
       setSpotifyNotice('');
-    } else if (track.preview_url || spotifyId) {
-      setTrackSource(track.preview_url ? 'preview' : 'stream');
-      if (!isSpotifyPremium && spotifyId) {
-        setSpotifyNotice('Playing uncompressed stream preview. Connect Spotify in Settings to sync with your devices.');
-      }
+      audioRef.current.src = streamUrl;
     } else {
+      // Connect to full 206 disk-based streaming endpoint for full playback & seeking
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1').replace(/\/+$/, '');
+      streamUrl = `${baseUrl}/music/tracks/${track.id}/stream`;
       setTrackSource('stream');
+      setSpotifyNotice('');
+      audioRef.current.src = streamUrl;
     }
 
-    audioRef.current.src = streamUrl;
     audioRef.current.currentTime = 0;
     audioRef.current.play()
       .then(() => setIsPlaying(true))
@@ -346,9 +343,10 @@ export function PlayerProvider({ children }) {
       return;
     }
     if (!audioRef.current) return;
-    audioRef.current.currentTime = timeInSeconds;
-    setCurrentTime(timeInSeconds);
-    setCurrentTimeMs(Math.floor(timeInSeconds * 1000));
+    const target = Math.max(0, Math.min(timeInSeconds, duration || 0));
+    audioRef.current.currentTime = target;
+    setCurrentTime(Math.floor(target));
+    setCurrentTimeMs(Math.floor(target * 1000));
   };
 
   const nextTrack = () => {

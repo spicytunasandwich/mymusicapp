@@ -39,6 +39,22 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Restore cached local theme immediately on mount
+  useEffect(() => {
+    try {
+      const savedAccent = localStorage.getItem('audira_theme_accent');
+      const savedGrad = localStorage.getItem('audira_gradient_top');
+      if (savedAccent) {
+        document.documentElement.style.setProperty('--audira-accent', savedAccent);
+        document.documentElement.style.setProperty('--primary-accent', savedAccent);
+        document.documentElement.style.setProperty('--audira-accent-glow', `${savedAccent}59`);
+      }
+      if (savedGrad) {
+        document.documentElement.style.setProperty('--audira-gradient-top', savedGrad);
+      }
+    } catch (_) {}
+  }, []);
+
   useEffect(() => {
     async function loadUser() {
       if (!token) {

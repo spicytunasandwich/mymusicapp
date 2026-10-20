@@ -232,14 +232,14 @@ exports.getTrackById = async (req, res) => {
   }
 };
 
-// 4. STREAM TRACK (Supports HTTP 206 Partial Content / Seeking)
+// 4. STREAM TRACK (Full Song Disk Streaming with HTTP 206 Partial Content & Seeking)
 exports.streamTrack = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
 
     const result = await pool.query(
-      'SELECT id, audio_url, stream_count FROM tracks WHERE id = $1',
+      'SELECT id, title, audio_url, duration, stream_count FROM tracks WHERE id = $1',
       [id]
     );
 
@@ -249,48 +249,113 @@ exports.streamTrack = async (req, res) => {
 
     const track = result.rows[0];
 
-    // Async record play count & history without blocking stream start
-    pool.query('UPDATE tracks SET stream_count = stream_count + 1 WHERE id = $1', [id]).catch(console.error);
+    // Async record play count & history
+    pool.query('UPDATE tracks SET stream_count = stream_count + 1 WHERE id = $1', [id]).catch(() => {});
     if (userId) {
-      pool.query('INSERT INTO play_history (user_id, track_id) VALUES ($1, $2)', [userId, id]).catch(console.error);
+      pool.query('INSERT INTO play_history (user_id, track_id) VALUES ($1, $2)', [userId, id]).catch(() => {});
     }
 
-    const audioUrl = track.audio_url;
+    const audioUrl = track.audio_url || '';
 
-    // Remote audio streaming (direct URL or external CDN)
-    if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
-      return res.redirect(302, audioUrl);
+    // Check candidate locations on local disk
+    const candidatePaths = [
+      path.resolve(__dirname, '../../uploads/tracks', path.basename(audioUrl)),
+      path.resolve(__dirname, '../../uploads', path.basename(audioUrl)),
+      path.resolve(__dirname, '../../', audioUrl),
+      path.resolve(audioUrl)
+    ];
+
+    let filePath = candidatePaths.find(p => fs.existsSync(p));
+
+    // If audioUrl is remote (e.g. SoundHelix or remote MP3) and not yet stored on disk, download full audio once
+    if (!filePath && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'))) {
+      try {
+        const tracksDir = path.join(__dirname, '../../uploads/tracks');
+        if (!fs.existsSync(tracksDir)) fs.mkdirSync(tracksDir, { recursive: true });
+        const localCachedPath = path.join(tracksDir, `${id}.mp3`);
+
+        if (!fs.existsSync(localCachedPath)) {
+          const fetchRes = await fetch(audioUrl);
+          if (fetchRes.ok) {
+            const buffer = Buffer.from(await fetchRes.arrayBuffer());
+            fs.writeFileSync(localCachedPath, buffer);
+            filePath = localCachedPath;
+            pool.query('UPDATE tracks SET audio_url = $1 WHERE id = $2', [`uploads/tracks/${id}.mp3`, id]).catch(() => {});
+          }
+        } else {
+          filePath = localCachedPath;
+        }
+      } catch (dlErr) {
+        console.warn('Failed to cache remote audio file to disk, falling back to direct stream:', dlErr.message);
+        return res.redirect(302, audioUrl);
+      }
     }
 
-    // Local audio file streaming with HTTP 206 Partial Content support
-    const filePath = path.resolve(audioUrl);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Audio file not found on server.' });
+    if (!filePath || !fs.existsSync(filePath)) {
+      if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+        return res.redirect(302, audioUrl);
+      }
+      return res.status(404).json({ error: 'Audio file not found on disk.' });
     }
 
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
 
+    // Detect MIME type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeMap = {
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.flac': 'audio/flac',
+      '.ogg': 'audio/ogg',
+      '.m4a': 'audio/mp4',
+      '.aac': 'audio/aac',
+      '.opus': 'audio/opus'
+    };
+    const contentType = mimeMap[ext] || 'audio/mpeg';
+
+    // Handle HEAD request for browser pre-flight duration and range capability detection
+    if (req.method === 'HEAD') {
+      res.writeHead(200, {
+        'Accept-Ranges': 'bytes',
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      return res.end();
+    }
+
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize || end >= fileSize || start > end) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${fileSize}`,
+          'Accept-Ranges': 'bytes'
+        });
+        return res.end();
+      }
+
       const chunksize = (end - start) + 1;
       const file = fs.createReadStream(filePath, { start, end });
       const head = {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400'
       };
       res.writeHead(206, head);
       file.pipe(res);
     } else {
       const head = {
         'Content-Length': fileSize,
-        'Content-Type': 'audio/mpeg',
-        'Accept-Ranges': 'bytes'
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=86400'
       };
       res.writeHead(200, head);
       fs.createReadStream(filePath).pipe(res);
@@ -298,6 +363,56 @@ exports.streamTrack = async (req, res) => {
   } catch (error) {
     console.error('Stream error:', error);
     res.status(500).json({ error: 'Failed to stream audio.' });
+  }
+};
+
+// 4B. UPLOAD LOCAL AUDIO TRACK (Saves file to disk, metadata to DB)
+exports.uploadTrack = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file provided.' });
+    }
+
+    const { title, artist_name, album_title, duration } = req.body;
+    const cleanTitle = (title || path.parse(req.file.originalname).name).trim();
+    const cleanArtist = (artist_name || 'Local Artist').trim();
+    const relativePath = `uploads/tracks/${req.file.filename}`;
+
+    let artistId;
+    const artRes = await pool.query('SELECT id FROM artists WHERE LOWER(name) = LOWER($1)', [cleanArtist]);
+    if (artRes.rows.length > 0) {
+      artistId = artRes.rows[0].id;
+    } else {
+      const newArt = await pool.query(
+        'INSERT INTO artists (name, avatar_url) VALUES ($1, $2) RETURNING id',
+        [cleanArtist, 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400']
+      );
+      artistId = newArt.rows[0].id;
+    }
+
+    const trackRes = await pool.query(
+      `INSERT INTO tracks (title, artist_id, duration, audio_url, cover_url, stream_count)
+       VALUES ($1, $2, $3, $4, $5, 0)
+       RETURNING id, title, duration, audio_url, cover_url, stream_count`,
+      [
+        cleanTitle,
+        artistId,
+        parseInt(duration, 10) || 180,
+        relativePath,
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400'
+      ]
+    );
+
+    res.json({
+      message: 'Track uploaded and saved to disk successfully.',
+      track: {
+        ...trackRes.rows[0],
+        artist_name: cleanArtist
+      }
+    });
+  } catch (error) {
+    console.error('Upload track error:', error);
+    res.status(500).json({ error: 'Failed to upload audio track.' });
   }
 };
 

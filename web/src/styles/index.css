@@ -7,30 +7,34 @@
   --audira-accent: #1DB954;
   --audira-accent-light: #1ED760;
   --audira-accent-glow: rgba(29, 185, 84, 0.35);
-  --audira-gradient-top: #1A2E22;
-  --audira-gradient-bottom: #121212;
-  --audira-bg-gradient: linear-gradient(180deg, var(--audira-gradient-top) 0%, var(--audira-gradient-bottom) 100%);
+  --audira-gradient-top: rgba(29, 185, 84, 0.18);
+  --audira-gradient-bottom: #000000;
+  --audira-bg-gradient: linear-gradient(180deg, var(--audira-gradient-top) 0%, #0a0a0a 45%, #000000 100%);
   --primary-accent: var(--audira-accent);
-  --bg-main: #121212;
+  --bg-main: #000000;
   --bg-sidebar: #000000;
-  --bg-surface: #181818;
-  --bg-card: #181818;
-  --bg-card-hover: #282828;
-  --bg-player: #181818;
+  --bg-surface: #0a0a0a;
+  --bg-card: #121212;
+  --bg-card-hover: #1f1f1f;
+  --bg-player: #000000;
 }
 
 html {
   scroll-behavior: smooth;
+  background-color: #000000;
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-main);
+  background-color: #000000;
+  background-image: linear-gradient(180deg, var(--audira-gradient-top, rgba(29, 185, 84, 0.18)) 0%, #0a0a0a 45%, #000000 100%);
+  background-attachment: fixed;
   color: #F8FAFC;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* 60fps Hardware Acceleration for Animated Surfaces */
