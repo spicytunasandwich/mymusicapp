@@ -1,9 +1,14 @@
+const path = require('path');
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+
+const isNeonOrSsl = process.env.DATABASE_URL?.includes('neon.tech') ||
+  process.env.DATABASE_URL?.includes('sslmode=require') ||
+  process.env.NODE_ENV === 'production';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/audira_db',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: isNeonOrSsl ? { rejectUnauthorized: false } : false
 });
 
 pool.on('error', (err) => {
