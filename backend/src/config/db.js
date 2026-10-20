@@ -24,9 +24,15 @@ async function initDbColumns() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires_at TIMESTAMPTZ;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_attempts INT DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_last_sent_at TIMESTAMPTZ;
-      ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_top VARCHAR(16) DEFAULT '#1A102E';
-      ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_bottom VARCHAR(16) DEFAULT '#08090E';
+      ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_top VARCHAR(16) DEFAULT '#1A2E22';
+      ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS gradient_bottom VARCHAR(16) DEFAULT '#121212';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name_font VARCHAR(64) DEFAULT 'Plus Jakarta Sans';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS show_activity BOOLEAN DEFAULT TRUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS presence_status VARCHAR(16) DEFAULT 'offline';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS current_track_json JSONB;
+      ALTER TABLE playlists ADD COLUMN IF NOT EXISTS privacy VARCHAR(16) DEFAULT 'public';
+      ALTER TABLE tracks ADD COLUMN IF NOT EXISTS spotify_id VARCHAR(64);
+      ALTER TABLE tracks ADD COLUMN IF NOT EXISTS preview_url TEXT;
       ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
       ALTER TABLE users ALTER COLUMN banner_url TYPE TEXT;
 

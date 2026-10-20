@@ -82,11 +82,11 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
                       )}
                     </div>
                     <div className="pr-3">
-                      <div className="quick-play-btn w-9 h-9 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent">
+                      <div className="quick-play-btn w-9 h-9 rounded-full bg-audira-accent text-black flex items-center justify-center shadow-md">
                         {isItemPlaying ? (
-                          <Pause size={15} className="fill-white" />
+                          <Pause size={15} className="fill-black text-black" />
                         ) : (
-                          <Play size={15} className="fill-white ml-0.5" />
+                          <Play size={15} className="fill-black text-black ml-0.5" />
                         )}
                       </div>
                     </div>
@@ -126,8 +126,8 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
                       alt={playlist.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="play-btn absolute right-2.5 bottom-2.5 w-11 h-11 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-play">
-                      <Play size={18} className="fill-white ml-0.5" />
+                    <div className="play-btn absolute right-2.5 bottom-2.5 w-11 h-11 rounded-full bg-audira-accent text-black flex items-center justify-center shadow-lg">
+                      <Play size={18} className="fill-black text-black ml-0.5" />
                     </div>
                   </div>
                   <h3 className="text-xs font-bold text-white truncate">{playlist.title}</h3>

@@ -350,10 +350,7 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ error: 'Google idToken is required.' });
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      return res.status(500).json({ error: 'Google OAuth is not configured on the server. Please set GOOGLE_CLIENT_ID.' });
-    }
+    const clientId = (process.env.GOOGLE_CLIENT_ID || '826501248219-h415d0bhodijs1bovd1qjnovv18skflp.apps.googleusercontent.com').trim();
 
     const client = new OAuth2Client(clientId);
     const ticket = await client.verifyIdToken({

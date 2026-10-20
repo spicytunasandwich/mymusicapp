@@ -22,22 +22,149 @@ export function PlayerProvider({ children }) {
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [likedMap, setLikedMap] = useState({}); // { [trackId]: true }
 
+  // Audio source: 'spotify' | 'local' | 'stream' | 'preview'
+  const [trackSource, setTrackSource] = useState('stream');
+
+  // Spotify Web Playback SDK state
+  const [spotifyToken, setSpotifyToken] = useState(() => localStorage.getItem('linear_spotify_token') || '');
+  const [spotifyUser, setSpotifyUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('linear_spotify_user') || 'null');
+    } catch {
+      return null;
+    }
+  });
+  const [spotifyDeviceId, setSpotifyDeviceId] = useState(null);
+  const [isSpotifyReady, setIsSpotifyReady] = useState(false);
+  const [isSpotifyPremium, setIsSpotifyPremium] = useState(false);
+  const [spotifyNotice, setSpotifyNotice] = useState('');
+  const spotifyPlayerRef = useRef(null);
+  const isPlayingSpotifyRef = useRef(false);
+
   // Set audio volume on mount
   useEffect(() => {
     audioRef.current.volume = volume;
   }, []);
 
-  // Audio event listeners
+  // Initialize Spotify Web Playback SDK
+  useEffect(() => {
+    if (!spotifyToken || typeof window === 'undefined') return;
+
+    // Fetch Spotify user profile to check for Premium status
+    fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${spotifyToken}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.id) {
+          setSpotifyUser(data);
+          localStorage.setItem('linear_spotify_user', JSON.stringify(data));
+          const hasPremium = data.product === 'premium';
+          setIsSpotifyPremium(hasPremium);
+          if (!hasPremium) {
+            setSpotifyNotice('Spotify account detected, but it is not Premium. Full playback requires Spotify Premium; using 30s previews and cloud streams.');
+          }
+        }
+      })
+      .catch(err => console.warn('Spotify profile check failed:', err));
+
+    const initPlayer = () => {
+      if (!window.Spotify || spotifyPlayerRef.current) return;
+
+      const player = new window.Spotify.Player({
+        name: 'Linear Web Player',
+        getOAuthToken: (cb) => cb(spotifyToken),
+        volume: volume
+      });
+
+      player.addListener('ready', ({ device_id }) => {
+        console.log('✅ Spotify Web Playback SDK ready with Device ID:', device_id);
+        setSpotifyDeviceId(device_id);
+        setIsSpotifyReady(true);
+      });
+
+      player.addListener('not_ready', ({ device_id }) => {
+        console.warn('Spotify Device ID went offline:', device_id);
+        setIsSpotifyReady(false);
+      });
+
+      player.addListener('player_state_changed', (state) => {
+        if (!state) return;
+        setIsPlaying(!state.paused);
+        isPlayingSpotifyRef.current = !state.paused;
+        setCurrentTime(Math.floor(state.position / 1000));
+        setCurrentTimeMs(state.position);
+        setDuration(Math.floor(state.duration / 1000));
+      });
+
+      player.addListener('account_error', ({ message }) => {
+        console.warn('Spotify account error:', message);
+        setIsSpotifyPremium(false);
+        setSpotifyNotice('Spotify Web Playback requires a Spotify Premium account.');
+      });
+
+      player.addListener('authentication_error', ({ message }) => {
+        console.warn('Spotify auth error:', message);
+        setSpotifyToken('');
+        localStorage.removeItem('linear_spotify_token');
+        setSpotifyNotice('Spotify session expired. Please reconnect your account.');
+      });
+
+      player.connect();
+      spotifyPlayerRef.current = player;
+    };
+
+    if (window.Spotify) {
+      initPlayer();
+    } else {
+      window.onSpotifyWebPlaybackSDKReady = initPlayer;
+    }
+
+    return () => {
+      if (spotifyPlayerRef.current) {
+        spotifyPlayerRef.current.disconnect();
+        spotifyPlayerRef.current = null;
+      }
+    };
+  }, [spotifyToken]);
+
+  const connectSpotify = async (token) => {
+    if (!token) return;
+    const cleanToken = token.trim();
+    localStorage.setItem('linear_spotify_token', cleanToken);
+    setSpotifyToken(cleanToken);
+  };
+
+  const disconnectSpotify = () => {
+    if (spotifyPlayerRef.current) {
+      spotifyPlayerRef.current.disconnect();
+      spotifyPlayerRef.current = null;
+    }
+    localStorage.removeItem('linear_spotify_token');
+    localStorage.removeItem('linear_spotify_user');
+    setSpotifyToken('');
+    setSpotifyUser(null);
+    setSpotifyDeviceId(null);
+    setIsSpotifyReady(false);
+    setIsSpotifyPremium(false);
+    setSpotifyNotice('');
+  };
+
+  // Audio event listeners for HTML5 Audio
   useEffect(() => {
     const audio = audioRef.current;
 
     const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      setCurrentTimeMs(Math.floor(audio.currentTime * 1000));
+      if (!isPlayingSpotifyRef.current) {
+        setCurrentTime(audio.currentTime);
+        setCurrentTimeMs(Math.floor(audio.currentTime * 1000));
+      }
     };
 
     const onLoadedMetadata = () => {
-      setDuration(audio.duration || 0);
+      if (!isPlayingSpotifyRef.current) {
+        setDuration(audio.duration || 0);
+      }
     };
 
     const onEnded = () => {
@@ -90,8 +217,8 @@ export function PlayerProvider({ children }) {
     }
   }, [currentTrack]);
 
-  // Play a track and optionally set queue
-  const playTrack = (track, newQueue = null) => {
+  // Play a track and determine source priority
+  const playTrack = async (track, newQueue = null) => {
     if (!track) return;
 
     if (newQueue) {
@@ -106,21 +233,68 @@ export function PlayerProvider({ children }) {
       }
       setCurrentTrack(track);
 
-      // Determine stream URL with full backend base URL fallback
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
-      const streamUrl = track.audio_url?.startsWith('http')
-        ? track.audio_url
-        : `${baseUrl}/music/tracks/${track.id}/stream`;
-
-      audioRef.current.src = streamUrl;
-      audioRef.current.currentTime = 0;
-
       // Sync like state if present
       if (typeof track.is_liked === 'boolean') {
         setLikedMap(prev => ({ ...prev, [track.id]: track.is_liked }));
       }
     }
 
+    // 1. Matched Local File Priority
+    if (track.source === 'local' || (track.audio_url && track.audio_url.startsWith('file://'))) {
+      if (spotifyPlayerRef.current) spotifyPlayerRef.current.pause();
+      isPlayingSpotifyRef.current = false;
+      setTrackSource('local');
+      audioRef.current.src = track.audio_url;
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      return;
+    }
+
+    // 2. Spotify Web Playback SDK (if Spotify Premium connected & track has spotify_id)
+    const spotifyId = track.spotify_id || (track.spotify_uri ? track.spotify_uri.replace('spotify:track:', '') : null);
+    if (spotifyId && isSpotifyReady && isSpotifyPremium && spotifyDeviceId) {
+      try {
+        audioRef.current.pause();
+        const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${spotifyToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ uris: [`spotify:track:${spotifyId}`] })
+        });
+
+        if (playRes.ok || playRes.status === 204) {
+          setTrackSource('spotify');
+          isPlayingSpotifyRef.current = true;
+          setIsPlaying(true);
+          return;
+        }
+      } catch (sdkErr) {
+        console.warn('Spotify SDK playback call error, falling back to audio stream:', sdkErr);
+      }
+    }
+
+    // 3. Fallback: Stream via HTML5 Audio (30s preview or Linear Cloud Stream)
+    if (spotifyPlayerRef.current) spotifyPlayerRef.current.pause();
+    isPlayingSpotifyRef.current = false;
+
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
+    const streamUrl = track.preview_url || (track.audio_url?.startsWith('http')
+      ? track.audio_url
+      : `${baseUrl}/music/tracks/${track.id}/stream`);
+
+    if (track.preview_url || spotifyId) {
+      setTrackSource(track.preview_url ? 'preview' : 'stream');
+      if (!isSpotifyPremium && spotifyId) {
+        setSpotifyNotice('Playing 30s preview. Connect Spotify Premium in Settings for full uncompressed playback.');
+      }
+    } else {
+      setTrackSource('stream');
+    }
+
+    audioRef.current.src = streamUrl;
+    audioRef.current.currentTime = 0;
     audioRef.current.play()
       .then(() => setIsPlaying(true))
       .catch(err => {
@@ -135,6 +309,11 @@ export function PlayerProvider({ children }) {
       return;
     }
 
+    if (isPlayingSpotifyRef.current && spotifyPlayerRef.current) {
+      spotifyPlayerRef.current.togglePlay();
+      return;
+    }
+
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -146,6 +325,10 @@ export function PlayerProvider({ children }) {
   };
 
   const seek = (timeInSeconds) => {
+    if (isPlayingSpotifyRef.current && spotifyPlayerRef.current) {
+      spotifyPlayerRef.current.seek(Math.floor(timeInSeconds * 1000));
+      return;
+    }
     if (!audioRef.current) return;
     audioRef.current.currentTime = timeInSeconds;
     setCurrentTime(timeInSeconds);
@@ -210,15 +393,20 @@ export function PlayerProvider({ children }) {
     const clamped = Math.max(0, Math.min(1, val));
     setVolumeState(clamped);
     audioRef.current.volume = clamped;
+    if (spotifyPlayerRef.current) {
+      spotifyPlayerRef.current.setVolume(clamped);
+    }
     if (clamped > 0 && isMuted) setIsMuted(false);
   };
 
   const toggleMute = () => {
     if (isMuted) {
       audioRef.current.volume = volume || 0.5;
+      if (spotifyPlayerRef.current) spotifyPlayerRef.current.setVolume(volume || 0.5);
       setIsMuted(false);
     } else {
       audioRef.current.volume = 0;
+      if (spotifyPlayerRef.current) spotifyPlayerRef.current.setVolume(0);
       setIsMuted(true);
     }
   };
@@ -251,34 +439,53 @@ export function PlayerProvider({ children }) {
   const isLiked = (trackId) => Boolean(likedMap[trackId]);
 
   return (
-    <PlayerContext.Provider value={{
-      currentTrack,
-      queue,
-      isPlaying,
-      currentTime,
-      currentTimeMs,
-      duration,
-      volume,
-      isMuted,
-      isShuffle,
-      repeatMode,
-      isLyricsOpen,
-      playTrack,
-      togglePlay,
-      seek,
-      nextTrack,
-      prevTrack,
-      setVolume,
-      toggleMute,
-      toggleShuffle,
-      cycleRepeat,
-      toggleLyrics,
-      toggleLike,
-      isLiked
-    }}>
+    <PlayerContext.Provider
+      value={{
+        currentTrack,
+        queue,
+        history,
+        isPlaying,
+        currentTime,
+        currentTimeMs,
+        duration,
+        volume,
+        isMuted,
+        isShuffle,
+        repeatMode,
+        isLyricsOpen,
+        trackSource,
+        spotifyToken,
+        spotifyUser,
+        isSpotifyReady,
+        isSpotifyPremium,
+        spotifyNotice,
+        clearSpotifyNotice: () => setSpotifyNotice(''),
+        connectSpotify,
+        disconnectSpotify,
+        playTrack,
+        togglePlay,
+        seek,
+        nextTrack,
+        prevTrack,
+        setVolume,
+        toggleMute,
+        toggleShuffle,
+        cycleRepeat,
+        toggleLyrics,
+        toggleLike,
+        isLiked,
+        setQueue
+      }}
+    >
       {children}
     </PlayerContext.Provider>
   );
 }
 
-export const usePlayer = () => useContext(PlayerContext);
+export function usePlayer() {
+  const context = useContext(PlayerContext);
+  if (!context) {
+    throw new Error('usePlayer must be used within a PlayerProvider');
+  }
+  return context;
+}

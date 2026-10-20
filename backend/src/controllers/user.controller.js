@@ -221,9 +221,9 @@ exports.getSettings = async (req, res) => {
       // Return defaults if not yet inserted
       return res.json({
         settings: {
-          theme_accent: '#8B5CF6',
-          gradient_top: '#1A102E',
-          gradient_bottom: '#08090E',
+          theme_accent: '#1DB954',
+          gradient_top: '#1A2E22',
+          gradient_bottom: '#121212',
           theme_mode: 'dark',
           home_widget_order: ['recently_played', 'featured_playlists', 'top_mixes', 'recommended_artists', 'new_releases'],
           audio_quality: 'high'
@@ -306,5 +306,74 @@ exports.uploadMedia = async (req, res) => {
   } catch (error) {
     console.error('Upload media error:', error);
     res.status(500).json({ error: 'Failed to upload image.' });
+  }
+};
+
+// 6. REAL-TIME USER PRESENCE & "LISTENING TO X" ACTIVITY
+exports.getUserPresence = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const result = await pool.query(
+      `SELECT id, username, display_name, avatar_url, presence_status, current_track_json, show_activity
+       FROM users WHERE LOWER(username) = LOWER($1)`,
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const user = result.rows[0];
+    const canShare = user.show_activity !== false;
+
+    res.json({
+      userId: user.id,
+      username: user.username,
+      displayName: user.display_name,
+      avatarUrl: user.avatar_url,
+      status: user.presence_status || 'offline',
+      currentTrack: canShare ? user.current_track_json : null,
+      showActivity: user.show_activity !== false
+    });
+  } catch (error) {
+    console.error('Get presence error:', error);
+    res.status(500).json({ error: 'Failed to retrieve presence.' });
+  }
+};
+
+exports.updateUserPresence = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, currentTrack, showActivity } = req.body;
+
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (status !== undefined) {
+      fields.push(`presence_status = $${idx++}`);
+      values.push(status);
+    }
+    if (currentTrack !== undefined) {
+      fields.push(`current_track_json = $${idx++}`);
+      values.push(currentTrack ? JSON.stringify(currentTrack) : null);
+    }
+    if (showActivity !== undefined) {
+      fields.push(`show_activity = $${idx++}`);
+      values.push(Boolean(showActivity));
+    }
+
+    if (fields.length > 0) {
+      values.push(userId);
+      await pool.query(
+        `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${idx}`,
+        values
+      );
+    }
+
+    res.json({ message: 'Presence updated successfully.' });
+  } catch (error) {
+    console.error('Update presence error:', error);
+    res.status(500).json({ error: 'Failed to update presence.' });
   }
 };

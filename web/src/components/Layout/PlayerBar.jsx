@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1,
-  Volume2, Volume1, VolumeX, Heart, Mic2
+  Volume2, Volume1, VolumeX, Heart, Mic2, Sparkles, Disc
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +27,9 @@ export default function PlayerBar() {
     isShuffle,
     repeatMode,
     isLyricsOpen,
+    trackSource,
+    spotifyNotice,
+    clearSpotifyNotice,
     togglePlay,
     seek,
     nextTrack,
@@ -57,10 +60,26 @@ export default function PlayerBar() {
 
   return (
     <footer className="relative bg-black/80 backdrop-blur-2xl border-t border-white/10 select-none z-30 shrink-0">
+      {/* Spotify Notice Banner */}
+      {spotifyNotice && (
+        <div className="bg-emerald-950/90 border-b border-emerald-500/30 text-emerald-200 px-4 py-1.5 text-xs flex items-center justify-between backdrop-blur-md">
+          <div className="flex items-center gap-2 truncate">
+            <Sparkles size={14} className="text-emerald-400 shrink-0" />
+            <span className="truncate">{spotifyNotice}</span>
+          </div>
+          <button
+            onClick={clearSpotifyNotice}
+            className="text-emerald-400 hover:text-white text-[11px] font-bold uppercase ml-3 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Top Scrubber Line on Mobile */}
       <div className="sm:hidden absolute top-0 left-0 right-0 h-1 bg-white/10">
         <div
-          className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-100"
+          className="h-full bg-gradient-to-r from-audira-accent to-emerald-400 transition-all duration-100"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -85,19 +104,55 @@ export default function PlayerBar() {
           </div>
           <div className="overflow-hidden min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-xs sm:text-sm font-bold text-white truncate hover:underline cursor-pointer">
+              <p
+                onClick={toggleLyrics}
+                className="text-xs sm:text-sm font-bold text-white truncate hover:underline cursor-pointer"
+              >
                 {currentTrack.title}
               </p>
               {isPlaying && <EqualizerWave className="shrink-0" />}
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-400 truncate hover:text-slate-200 cursor-pointer">
-              {currentTrack.artist_name || 'Audira Artist'}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p
+                onClick={() => {
+                  if (currentTrack.artist_id) {
+                    window.dispatchEvent(new CustomEvent('linear:open-artist', { detail: currentTrack.artist_id }));
+                  }
+                }}
+                className="text-[11px] sm:text-xs text-slate-400 truncate hover:text-slate-200 cursor-pointer"
+              >
+                {currentTrack.artist_name || 'Linear Artist'}
+              </p>
+              {/* Audio Source Badge */}
+              {trackSource === 'spotify' && (
+                <span className="hidden sm:inline-flex items-center text-[9px] font-bold text-black bg-[#1DB954] px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Spotify HD
+                </span>
+              )}
+              {trackSource === 'local' && (
+                <span className="hidden sm:inline-flex items-center text-[9px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Local
+                </span>
+              )}
+              {trackSource === 'preview' && (
+                <span className="hidden sm:inline-flex items-center text-[9px] font-bold text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Preview 30s
+                </span>
+              )}
+              {trackSource === 'stream' && (
+                <span className="hidden sm:inline-flex items-center text-[9px] font-bold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Linear Cloud
+                </span>
+              )}
+            </div>
           </div>
           <AnimatedLikeButton
             isLiked={liked}
             onToggle={() => toggleLike(currentTrack.id)}
             size={18}
+            className="shrink-0"
+          />
+        </div>
             className="shrink-0"
           />
         </div>
@@ -109,7 +164,7 @@ export default function PlayerBar() {
             <SpringButton
               onClick={toggleShuffle}
               className={`hidden sm:flex p-1.5 rounded-full transition ${
-                isShuffle ? 'text-purple-400 hover:text-purple-300' : 'text-slate-400 hover:text-white'
+                isShuffle ? 'text-audira-accent hover:opacity-80' : 'text-slate-400 hover:text-white'
               }`}
               title="Shuffle"
             >
@@ -128,7 +183,7 @@ export default function PlayerBar() {
               onClick={togglePlay}
               scaleHover={1.08}
               scaleTap={0.92}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center transition shadow-lg shadow-purple-500/20"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center transition shadow-lg shadow-black/40 hover:scale-105"
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? (
@@ -149,13 +204,13 @@ export default function PlayerBar() {
             <SpringButton
               onClick={cycleRepeat}
               className={`hidden sm:flex p-1.5 rounded-full relative transition ${
-                repeatMode !== 'off' ? 'text-purple-400 hover:text-purple-300' : 'text-slate-400 hover:text-white'
+                repeatMode !== 'off' ? 'text-audira-accent hover:opacity-80' : 'text-slate-400 hover:text-white'
               }`}
               title={`Repeat: ${repeatMode}`}
             >
               {repeatMode === 'one' ? <Repeat1 size={17} /> : <Repeat size={17} />}
               {repeatMode !== 'off' && (
-                <span className="w-1.5 h-1.5 bg-purple-400 rounded-full absolute bottom-0 left-1/2 -translate-x-1/2" />
+                <span className="w-1.5 h-1.5 bg-audira-accent rounded-full absolute bottom-0 left-1/2 -translate-x-1/2" />
               )}
             </SpringButton>
           </div>

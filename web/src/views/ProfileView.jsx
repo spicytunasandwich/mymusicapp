@@ -9,6 +9,8 @@ import ImageCropModal from '../components/Common/ImageCropModal';
 import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
 import ColorPicker from '../components/Common/ColorPicker';
 import FontPicker from '../components/Common/FontPicker';
+import EqualizerWave from '../components/Common/EqualizerWave';
+import { usePresence } from '../context/PresenceContext';
 
 const BADGE_ICONS = {
   early_adopter: { icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/30' },
@@ -44,6 +46,8 @@ export default function ProfileView({ username, onSelectPlaylist }) {
 
   const targetUsername = username || currentUser?.username;
   const isOwnProfile = currentUser && currentUser.username?.toLowerCase() === targetUsername?.toLowerCase();
+  const { getPresence, showActivity, toggleActivityPrivacy } = usePresence();
+  const presence = getPresence(targetUsername);
 
   useEffect(() => {
     if (!targetUsername) return;
@@ -194,10 +198,12 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                   }}
                 />
               </div>
-              {/* Discord-style Online status dot */}
+              {/* Real-time Presence status dot (Online / Idle / Offline) */}
               <div
-                title="Active on Audira"
-                className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 w-6 h-6 rounded-full bg-emerald-500 border-4 border-[#10111B] shadow-md flex items-center justify-center"
+                title={presence.status === 'online' ? 'Online on Linear' : presence.status === 'idle' ? 'Idle' : 'Offline'}
+                className={`absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 w-6 h-6 rounded-full border-4 border-[#10111B] shadow-md flex items-center justify-center transition-colors ${
+                  presence.status === 'online' ? 'bg-emerald-500' : presence.status === 'idle' ? 'bg-amber-400' : 'bg-slate-500'
+                }`}
               />
             </div>
 
@@ -216,6 +222,31 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-400">@{profile.username}</p>
+
+              {/* Real-time "Listening to X" Card */}
+              {presence.currentTrack && (
+                <div className="pt-1">
+                  <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md shadow-md max-w-full">
+                    <img
+                      src={presence.currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100'}
+                      alt=""
+                      className="w-8 h-8 rounded-lg object-cover shadow shrink-0"
+                    />
+                    <div className="text-left min-w-0 pr-1">
+                      <div className="flex items-center gap-1.5 text-[9px] uppercase font-bold text-audira-accent tracking-wider">
+                        <EqualizerWave className="h-2.5" />
+                        <span>Listening to</span>
+                      </div>
+                      <p className="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-[280px]">
+                        {presence.currentTrack.title}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate max-w-[180px]">
+                        {presence.currentTrack.artist}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Badges Row (replaces tags with interactive icon badges & tooltips) */}
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1.5">
@@ -325,6 +356,23 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 />
               </div>
 
+              {/* Listening Activity Privacy Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0D0E15] border border-audira-border">
+                <div>
+                  <span className="font-bold text-white text-xs block">Broadcast Listening Activity</span>
+                  <span className="text-[10px] text-slate-400">Display "Listening to [Song]" in real-time on your profile</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleActivityPrivacy(!showActivity)}
+                  className={`w-11 h-6 rounded-full transition-colors p-1 flex items-center ${
+                    showActivity ? 'bg-audira-accent justify-end' : 'bg-white/20 justify-start'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+                </button>
+              </div>
+
               <div>
                 <ColorPicker
                   color={accentColor}
@@ -362,7 +410,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Banner (8:3 • 1280×480 HD)</label>
+                  <label className="font-bold text-slate-400 block mb-1">Banner (8:3 • 1920×720 Ultra HD)</label>
                   <label className="cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-audira-hover border border-audira-border hover:border-purple-500 transition text-slate-300">
                     <Camera size={14} />
                     <span>{uploadingBanner ? 'Uploading...' : 'Choose image'}</span>

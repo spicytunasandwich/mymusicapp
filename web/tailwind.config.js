@@ -8,18 +8,19 @@ export default {
     extend: {
       colors: {
         audira: {
-          bg: '#08090E',
-          sidebar: '#06070B',
-          surface: '#10111B',
-          card: '#151724',
-          'card-hover': '#1C1F30',
-          player: '#0B0C14',
-          border: '#222538',
-          'border-subtle': '#181A28',
-          hover: '#181A29',
-          accent: 'var(--audira-accent, #8B5CF6)',
-          'accent-light': 'var(--audira-accent-light, #A78BFA)',
-          'accent-glow': 'var(--audira-accent-glow, rgba(139, 92, 246, 0.35))',
+          bg: '#121212',
+          sidebar: '#000000',
+          surface: '#181818',
+          card: '#181818',
+          'card-hover': '#282828',
+          player: '#181818',
+          border: '#282828',
+          'border-subtle': '#1F1F1F',
+          hover: '#282828',
+          accent: 'var(--audira-accent, #1DB954)',
+          'accent-light': 'var(--audira-accent-light, #1ED760)',
+          'accent-glow': 'var(--audira-accent-glow, rgba(29, 185, 84, 0.35))',
+          green: '#1DB954',
           purple: '#8B5CF6',
           violet: '#7C3AED',
           cyan: '#06B6D4',
@@ -29,8 +30,8 @@ export default {
       },
       boxShadow: {
         'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-        'glow-accent': '0 0 25px -5px var(--audira-accent-glow, rgba(139, 92, 246, 0.4))',
-        'glow-play': '0 8px 24px -4px rgba(139, 92, 246, 0.5)',
+        'glow-accent': '0 0 25px -5px var(--audira-accent-glow, rgba(29, 185, 84, 0.4))',
+        'glow-play': '0 8px 24px -4px rgba(29, 185, 84, 0.5)',
         'spotify-card': '0 10px 20px -5px rgba(0, 0, 0, 0.5)'
       },
       animation: {

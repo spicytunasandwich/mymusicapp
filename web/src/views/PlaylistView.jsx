@@ -80,7 +80,35 @@ export default function PlaylistView({ playlistId, onBack }) {
         </div>
 
         <div className="flex-1 overflow-hidden text-center md:text-left">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400">Public Playlist</span>
+          <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+            {isOwner ? (
+              <select
+                value={playlist.privacy || (playlist.is_public ? 'public' : 'private')}
+                onChange={async (e) => {
+                  const newPrivacy = e.target.value;
+                  try {
+                    await api.put(`/library/playlists/${playlist.id}`, { privacy: newPrivacy });
+                    setPlaylist(prev => ({
+                      ...prev,
+                      privacy: newPrivacy,
+                      is_public: newPrivacy !== 'private'
+                    }));
+                  } catch (err) {
+                    console.error('Failed to update privacy:', err);
+                  }
+                }}
+                className="bg-black/60 border border-white/20 text-audira-accent hover:border-audira-accent rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider cursor-pointer outline-none transition"
+              >
+                <option value="public" className="bg-[#181818] text-white">🌐 Public Playlist</option>
+                <option value="link_only" className="bg-[#181818] text-white">🔗 Link-Only Playlist</option>
+                <option value="private" className="bg-[#181818] text-white">🔒 Private Playlist</option>
+              </select>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-wider text-audira-accent">
+                {playlist.privacy === 'private' ? '🔒 Private Playlist' : playlist.privacy === 'link_only' ? '🔗 Link-Only' : '🌐 Public Playlist'}
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white mt-1 mb-3 truncate">{playlist.title}</h1>
           <p className="text-xs text-slate-400 line-clamp-2 max-w-2xl">{playlist.description}</p>
 
@@ -104,14 +132,24 @@ export default function PlaylistView({ playlistId, onBack }) {
               playTrack(playlist.tracks[0], playlist.tracks);
             }
           }}
-          className="w-14 h-14 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent hover:scale-105 active:scale-95 transition"
+          className="w-14 h-14 rounded-full bg-audira-accent text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"
           title={isCurrentPlaylistPlaying ? 'Pause' : 'Play Playlist'}
         >
           {isCurrentPlaylistPlaying ? (
-            <Pause size={24} className="fill-white" />
+            <Pause size={24} className="fill-black" />
           ) : (
-            <Play size={24} className="fill-white ml-1" />
+            <Play size={24} className="fill-black ml-1" />
           )}
+        </button>
+
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Playlist link copied to clipboard!');
+          }}
+          className="px-4 py-2 rounded-full border border-white/20 hover:border-white text-xs font-bold text-white transition hover:scale-105 active:scale-95"
+        >
+          Share
         </button>
       </div>
 

@@ -1,10 +1,16 @@
+const http = require('http');
 const app = require('./app');
+const { initWebSocketServer } = require('./websocket');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
 
-app.listen(PORT, () => {
-  console.log(`🎵 Audira Music API server running on port ${PORT}`);
+// Initialize real-time WebSockets for presence and listening activity
+initWebSocketServer(server);
+
+server.listen(PORT, () => {
+  console.log(`🎵 Linear Music API & WebSocket server running on port ${PORT}`);
   console.log(`📡 Base API contract: http://localhost:${PORT}/api/v1`);
   console.log(`🩺 Health check: http://localhost:${PORT}/api/v1/health`);
 });

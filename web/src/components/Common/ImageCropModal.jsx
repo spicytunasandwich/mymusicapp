@@ -21,8 +21,8 @@ export default function ImageCropModal({
 
   // Target storage dimensions
   const isAvatar = cropType === 'avatar';
-  const targetWidth = isAvatar ? 512 : 1280;
-  const targetHeight = isAvatar ? 512 : 480;
+  const targetWidth = isAvatar ? 512 : 1920;
+  const targetHeight = isAvatar ? 512 : 720;
   const aspectRatio = isAvatar ? 1 : 8 / 3;
 
   // Preview box dimensions in the modal UI
@@ -50,7 +50,9 @@ export default function ImageCropModal({
 
   if (!isOpen || !imageFile || !imageSrc) return null;
 
-  // Drag handlers for interactive panning
+  const touchDistance = useRef(null);
+
+  // Drag handlers for interactive panning & pinch zoom
   const handleMouseDown = (e) => {
     if (isGif) return; // GIFs are not cropped with 2D canvas to preserve animation
     setIsDragging(true);
@@ -67,23 +69,49 @@ export default function ImageCropModal({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    touchDistance.current = null;
+  };
+
+  const handleWheel = (e) => {
+    if (isGif) return;
+    e.preventDefault();
+    const zoomDelta = e.deltaY * -0.0015;
+    setZoom(prev => Math.min(4, Math.max(1, prev + zoomDelta)));
   };
 
   const handleTouchStart = (e) => {
-    if (isGif || e.touches.length !== 1) return;
-    setIsDragging(true);
-    setDragStart({
-      x: e.touches[0].clientX - offset.x,
-      y: e.touches[0].clientY - offset.y
-    });
+    if (isGif) return;
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchDistance.current = dist;
+    } else if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - offset.x,
+        y: e.touches[0].clientY - offset.y
+      });
+    }
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging || isGif || e.touches.length !== 1) return;
-    setOffset({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y
-    });
+    if (isGif) return;
+    if (e.touches.length === 2 && touchDistance.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = (dist - touchDistance.current) * 0.005;
+      setZoom(prev => Math.min(4, Math.max(1, prev + delta)));
+      touchDistance.current = dist;
+    } else if (isDragging && e.touches.length === 1) {
+      setOffset({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y
+      });
+    }
   };
 
   const handleReset = () => {
@@ -172,7 +200,7 @@ export default function ImageCropModal({
               {isAvatar ? 'Crop & Preview Avatar (1:1)' : 'Crop & Preview Banner (8:3)'}
             </h3>
             <p className="text-[11px] text-slate-400">
-              {isAvatar ? 'Stored at 512×512 HD' : 'Stored at 1280×480 Retina HD'}
+              {isAvatar ? 'Stored at 512×512 HD' : 'Stored at 1920×720 Ultra HD'}
             </p>
           </div>
           <button
@@ -198,11 +226,12 @@ export default function ImageCropModal({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleMouseUp}
             style={{ width: `${boxWidth}px`, height: `${boxHeight}px` }}
-            className={`relative overflow-hidden bg-[#07080E] border-2 border-purple-500/60 shadow-inner select-none ${
+            className={`relative overflow-hidden bg-[#07080E] border-2 border-audira-accent/60 shadow-inner select-none ${
               isAvatar ? 'rounded-full' : 'rounded-2xl'
             } ${!isGif ? 'cursor-grab active:cursor-grabbing' : ''}`}
           >
@@ -250,11 +279,11 @@ export default function ImageCropModal({
               <input
                 type="range"
                 min="1"
-                max="3"
-                step="0.05"
+                max="4"
+                step="0.02"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-full accent-purple-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                className="w-full accent-audira-accent cursor-pointer h-1.5 bg-slate-800 rounded-lg"
               />
               <ZoomIn size={16} className="text-slate-400 shrink-0" />
               <button

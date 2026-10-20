@@ -58,13 +58,13 @@ function parseHexToHsv(hex, fallback = { h: 260, s: 0.65, v: 0.95 }) {
 }
 
 const DEFAULT_PRESETS = [
-  '#8B5CF6', '#7C3AED', '#3B82F6', '#06B6D4',
-  '#10B981', '#F59E0B', '#EC4899', '#F43F5E',
-  '#6366F1', '#A855F7', '#14B8A6', '#EAB308'
+  '#1DB954', '#1ED760', '#8B5CF6', '#7C3AED',
+  '#3B82F6', '#06B6D4', '#10B981', '#F59E0B',
+  '#EC4899', '#F43F5E', '#6366F1', '#EAB308'
 ];
 
 export default function ColorPicker({
-  color = '#8B5CF6',
+  color = '#1DB954',
   onChange,
   showAlpha = false,
   alpha = 1,

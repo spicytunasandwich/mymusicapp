@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Palette, LayoutGrid, Check, ArrowUp, ArrowDown, Sparkles, Volume2, Shield, Sliders } from 'lucide-react';
+import { Palette, LayoutGrid, Check, ArrowUp, ArrowDown, Sparkles, Volume2, Shield, Sliders, Music, Radio, Key, LogOut } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { usePlayer } from '../context/PlayerContext';
 import ColorPicker from '../components/Common/ColorPicker';
 
 const ACCENTS = [
+  { name: 'Spotify Green', hex: '#1DB954' },
+  { name: 'Emerald Wave', hex: '#1ED760' },
   { name: 'Electric Violet', hex: '#8B5CF6' },
   { name: 'Cyber Cyan', hex: '#06B6D4' },
   { name: 'Neon Pink', hex: '#EC4899' },
-  { name: 'Emerald Wave', hex: '#10B981' },
   { name: 'Solar Amber', hex: '#F59E0B' },
   { name: 'Royal Indigo', hex: '#6366F1' },
-  { name: 'Crimson Rose', hex: '#F43F5E' },
-  { name: 'Deep Purple', hex: '#7C3AED' }
+  { name: 'Crimson Rose', hex: '#F43F5E' }
 ];
 
 const WIDGET_LABELS = {
@@ -25,9 +26,18 @@ const WIDGET_LABELS = {
 
 export default function SettingsView() {
   const { isAuthenticated, openAuth } = useAuth();
-  const [themeAccent, setThemeAccent] = useState('#8B5CF6');
-  const [gradientTop, setGradientTop] = useState('#1A102E');
-  const [gradientBottom, setGradientBottom] = useState('#08090E');
+  const {
+    spotifyToken,
+    spotifyUser,
+    isSpotifyReady,
+    isSpotifyPremium,
+    connectSpotify,
+    disconnectSpotify
+  } = usePlayer();
+  const [inputToken, setInputToken] = useState(spotifyToken || '');
+  const [themeAccent, setThemeAccent] = useState('#1DB954');
+  const [gradientTop, setGradientTop] = useState('#1A2E22');
+  const [gradientBottom, setGradientBottom] = useState('#121212');
   const [activeStop, setActiveStop] = useState('accent'); // 'accent' | 'top' | 'bottom'
   const [themeMode, setThemeMode] = useState('dark');
   const [audioQuality, setAudioQuality] = useState('high');
@@ -350,6 +360,79 @@ export default function SettingsView() {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* Spotify Web Playback SDK Integration */}
+      <section className="discord-card p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white font-bold text-sm">
+            <Radio size={18} className="text-[#1DB954]" />
+            <span>Spotify Web Playback SDK (Direct HD Streaming)</span>
+          </div>
+          {spotifyToken && (
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+              isSpotifyPremium ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+            }`}>
+              {isSpotifyPremium ? 'Spotify Premium ✅' : 'Free Account (30s Previews)'}
+            </span>
+          )}
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Connect your Spotify Premium listener account to stream full tracks at 320kbps CD quality directly inside Linear through the official Spotify Web Playback SDK. Uploaded/matched local songs take priority, while imported Spotify tracks play seamlessly with album art.
+        </p>
+
+        {spotifyToken ? (
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {spotifyUser?.images?.[0]?.url ? (
+                <img src={spotifyUser.images[0].url} alt="" className="w-10 h-10 rounded-full object-cover border border-[#1DB954]" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/40 flex items-center justify-center text-[#1DB954] font-bold text-sm">
+                  SP
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-bold text-white">
+                  Connected as <span className="text-[#1DB954]">{spotifyUser?.display_name || 'Spotify Listener'}</span>
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {isSpotifyPremium ? 'Full 320kbps Web Playback Active' : 'Premium required for full playback (playing previews)'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={disconnectSpotify}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold transition w-full sm:w-auto justify-center"
+            >
+              <LogOut size={14} />
+              <span>Disconnect</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <input
+                type="password"
+                value={inputToken}
+                onChange={(e) => setInputToken(e.target.value)}
+                placeholder="Paste your Spotify OAuth User Access Token..."
+                className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#1DB954]"
+              />
+              <button
+                onClick={() => connectSpotify(inputToken)}
+                disabled={!inputToken.trim()}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:opacity-40 text-black font-bold text-xs uppercase tracking-wider shrink-0 transition"
+              >
+                Connect
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Need a token? Generate an OAuth token with <code>streaming user-read-email user-read-private</code> permissions via Spotify Developer Dashboard.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );

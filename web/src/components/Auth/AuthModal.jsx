@@ -64,8 +64,13 @@ export default function AuthModal() {
       await googleLogin(response.credential);
       closeAuth();
     } catch (err) {
-      console.error('Google login verification failure:', err);
-      setError(err.data?.error || err.message || 'Google sign-in failed. Please try again.');
+      console.error('[Google Login Diagnostic]', {
+        error: err,
+        origin: typeof window !== 'undefined' ? window.location.origin : '',
+        details: err.data || err.message
+      });
+      const errorMsg = err.data?.error || err.message || 'Google sign-in verification failed.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

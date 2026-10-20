@@ -205,7 +205,7 @@ export const AnimatedLikeButton = ({ isLiked, onToggle, size = 18, className = '
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={isLiked ? 'text-purple-400 fill-purple-400' : 'text-slate-400 hover:text-white'}
+        className={isLiked ? 'text-audira-accent fill-audira-accent' : 'text-slate-400 hover:text-white'}
         animate={isLiked && !shouldReduceMotion ? { scale: [1, 1.25, 1] } : { scale: 1 }}
         transition={{ duration: 0.3 }}
       >

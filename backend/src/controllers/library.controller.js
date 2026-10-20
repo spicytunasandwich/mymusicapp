@@ -71,7 +71,7 @@ exports.getLikedSongs = async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await pool.query(
-      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count,
+      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count, t.spotify_id, t.preview_url,
               a.id as artist_id, a.name as artist_name,
               al.id as album_id, al.title as album_title,
               ls.created_at as liked_at, true as is_liked
@@ -183,15 +183,18 @@ exports.deleteFolder = async (req, res) => {
 exports.createPlaylist = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, description, cover_url, folder_id, is_public = true } = req.body;
+    const { title, description, cover_url, folder_id, privacy = 'public', is_public = true } = req.body;
 
     if (!title || !title.trim()) return res.status(400).json({ error: 'Playlist title is required.' });
 
+    const normalizedPrivacy = ['public', 'link_only', 'private'].includes(privacy) ? privacy : 'public';
+    const effectiveIsPublic = normalizedPrivacy !== 'private';
+
     const result = await pool.query(
-      `INSERT INTO playlists (user_id, title, description, cover_url, folder_id, is_public)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, title, description, cover_url, folder_id, is_public, created_at`,
-      [userId, title.trim(), description?.trim() || '', cover_url || '', folder_id || null, is_public]
+      `INSERT INTO playlists (user_id, title, description, cover_url, folder_id, privacy, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, title, description, cover_url, folder_id, privacy, is_public, created_at`,
+      [userId, title.trim(), description?.trim() || '', cover_url || '', folder_id || null, normalizedPrivacy, effectiveIsPublic]
     );
 
     res.status(201).json({ playlist: result.rows[0] });
@@ -209,7 +212,12 @@ exports.getPlaylistById = async (req, res) => {
       `SELECT p.*, u.username as owner_username, u.display_name as owner_name, u.avatar_url as owner_avatar
        FROM playlists p
        JOIN users u ON u.id = p.user_id
-       WHERE p.id = $1 AND (p.is_public = true OR p.user_id = $2)`,
+       WHERE p.id = $1 AND (
+         p.privacy = 'public' OR
+         p.privacy = 'link_only' OR
+         (p.privacy IS NULL AND p.is_public = true) OR
+         p.user_id = $2
+       )`,
       [id, userId || null]
     );
 
@@ -221,7 +229,7 @@ exports.getPlaylistById = async (req, res) => {
 
     // Tracks in playlist
     const tracksRes = await pool.query(
-      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count,
+      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count, t.spotify_id, t.preview_url,
               a.id as artist_id, a.name as artist_name,
               al.id as album_id, al.title as album_title,
               pt.position, pt.added_at,
@@ -248,7 +256,10 @@ exports.updatePlaylist = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { title, description, cover_url, folder_id, is_public } = req.body;
+    const { title, description, cover_url, folder_id, privacy, is_public } = req.body;
+
+    const normalizedPrivacy = privacy && ['public', 'link_only', 'private'].includes(privacy) ? privacy : null;
+    const effectiveIsPublic = normalizedPrivacy ? (normalizedPrivacy !== 'private') : is_public;
 
     const result = await pool.query(
       `UPDATE playlists
@@ -256,11 +267,12 @@ exports.updatePlaylist = async (req, res) => {
            description = COALESCE($2, description),
            cover_url = COALESCE($3, cover_url),
            folder_id = $4,
-           is_public = COALESCE($5, is_public),
+           privacy = COALESCE($5, privacy),
+           is_public = COALESCE($6, is_public),
            updated_at = NOW()
-       WHERE id = $6 AND user_id = $7
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
-      [title?.trim(), description?.trim(), cover_url, folder_id !== undefined ? folder_id : null, is_public, id, userId]
+      [title?.trim(), description?.trim(), cover_url, folder_id !== undefined ? folder_id : null, normalizedPrivacy, effectiveIsPublic, id, userId]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Playlist not found.' });

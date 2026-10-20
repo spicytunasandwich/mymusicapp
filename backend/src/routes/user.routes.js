@@ -14,6 +14,10 @@ router.patch('/profile', requireAuth, userController.updateProfile);
 router.get('/settings', requireAuth, userController.getSettings);
 router.patch('/settings', requireAuth, userController.updateSettings);
 
+// Presence & Real-time Listening Activity
+router.get('/presence/:username', userController.getUserPresence);
+router.put('/presence', requireAuth, userController.updateUserPresence);
+
 // Image Uploads (Avatar, Banner, Playlist Cover)
 router.post('/upload', requireAuth, uploadSingleImage('image'), userController.uploadMedia);
 

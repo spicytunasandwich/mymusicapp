@@ -98,7 +98,7 @@ exports.search = async (req, res) => {
 
     const [tracksRes, artistsRes, albumsRes, playlistsRes] = await Promise.all([
       pool.query(
-        `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count,
+        `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count, t.spotify_id, t.preview_url,
                 a.id as artist_id, a.name as artist_name,
                 al.id as album_id, al.title as album_title,
                 EXISTS(SELECT 1 FROM liked_songs ls WHERE ls.track_id = t.id AND ls.user_id = $2) as is_liked
@@ -156,7 +156,7 @@ exports.getTrackById = async (req, res) => {
     const userId = req.user?.id;
 
     const result = await pool.query(
-      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count,
+      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count, t.spotify_id, t.preview_url,
               t.is_explicit, t.release_date,
               a.id as artist_id, a.name as artist_name, a.avatar_url as artist_avatar,
               al.id as album_id, al.title as album_title,
@@ -298,7 +298,7 @@ exports.getArtistById = async (req, res) => {
 
     // Top tracks
     const tracksRes = await pool.query(
-      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count,
+      `SELECT t.id, t.title, t.duration, t.audio_url, t.cover_url, t.stream_count, t.spotify_id, t.preview_url,
               al.id as album_id, al.title as album_title,
               EXISTS(SELECT 1 FROM liked_songs ls WHERE ls.track_id = t.id AND ls.user_id = $2) as is_liked
        FROM tracks t

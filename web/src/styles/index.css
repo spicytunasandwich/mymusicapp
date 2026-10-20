@@ -1,22 +1,22 @@
+@import './fonts.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import './fonts.css';
 
 :root {
-  --audira-accent: #8B5CF6;
-  --audira-accent-light: #A78BFA;
-  --audira-accent-glow: rgba(139, 92, 246, 0.35);
-  --audira-gradient-top: #1A102E;
-  --audira-gradient-bottom: #08090E;
+  --audira-accent: #1DB954;
+  --audira-accent-light: #1ED760;
+  --audira-accent-glow: rgba(29, 185, 84, 0.35);
+  --audira-gradient-top: #1A2E22;
+  --audira-gradient-bottom: #121212;
   --audira-bg-gradient: linear-gradient(180deg, var(--audira-gradient-top) 0%, var(--audira-gradient-bottom) 100%);
   --primary-accent: var(--audira-accent);
-  --bg-main: #08090E;
-  --bg-sidebar: #06070B;
-  --bg-surface: #10111B;
-  --bg-card: #151724;
-  --bg-card-hover: #1C1F30;
-  --bg-player: #0B0C14;
+  --bg-main: #121212;
+  --bg-sidebar: #000000;
+  --bg-surface: #181818;
+  --bg-card: #181818;
+  --bg-card-hover: #282828;
+  --bg-player: #181818;
 }
 
 html {
@@ -94,25 +94,32 @@ body {
 .spotify-card {
   position: relative;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-  background-color: #151724;
+  background-color: #181818;
+  border-radius: 8px;
   border: 1px solid transparent;
 }
 .spotify-card:hover {
-  background-color: #1C1F30;
-  border-color: rgba(255, 255, 255, 0.06);
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.6);
+  background-color: #282828;
+  border-color: rgba(255, 255, 255, 0.04);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.7);
 }
 
 /* Floating Play Button for Cards */
 .spotify-card .play-btn {
   opacity: 0;
   transform: translateY(8px);
+  background-color: var(--audira-accent, #1DB954);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
   transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .spotify-card:hover .play-btn {
   opacity: 1;
   transform: translateY(0);
+}
+.spotify-card .play-btn:hover {
+  transform: scale(1.06);
+  filter: brightness(1.08);
 }
 
 /* 2-Column Quick Play Cards (Home view header) */
@@ -120,25 +127,30 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   cursor: pointer;
 }
 .quick-play-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: scale(1.015);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .quick-play-card .quick-play-btn {
   opacity: 0;
   transform: scale(0.85);
+  background-color: var(--audira-accent, #1DB954);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .quick-play-card:hover .quick-play-btn {
   opacity: 1;
   transform: scale(1);
+}
+.quick-play-card .quick-play-btn:hover {
+  transform: scale(1.08);
 }
 
 /* Discord-Style Profile Badges & Cards */
