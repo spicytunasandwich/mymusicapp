@@ -168,19 +168,19 @@ export default function ProfileView({ username, onSelectPlaylist }) {
             {/* Avatar with Discord Accent Border + Online Presence Indicator */}
             <div className="relative shrink-0">
               <div
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden p-[3px] bg-[#10111B] shadow-2xl transition-transform hover:scale-105"
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden p-[3px] bg-[#10111B] shadow-2xl transition-transform hover:scale-105"
                 style={{ border: `3.5px solid ${effectiveAccent}` }}
               >
                 <img
                   src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=audira'}
                   alt={profile.display_name}
-                  className="w-full h-full object-cover rounded-[20px]"
+                  className="w-full h-full object-cover rounded-full"
                 />
               </div>
               {/* Discord-style Online status dot */}
               <div
                 title="Active on Audira"
-                className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-[#10111B] shadow-md flex items-center justify-center"
+                className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 w-6 h-6 rounded-full bg-emerald-500 border-4 border-[#10111B] shadow-md flex items-center justify-center"
               />
             </div>
 

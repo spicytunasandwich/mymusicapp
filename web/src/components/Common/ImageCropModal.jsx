@@ -227,7 +227,7 @@ export default function ImageCropModal({
 
             {/* Viewfinder Overlay Guide */}
             {!isGif && (
-              <div className="absolute inset-0 pointer-events-none border border-white/20">
+              <div className={`absolute inset-0 pointer-events-none border border-white/20 ${isAvatar ? 'rounded-full' : ''}`}>
                 <div className="w-full h-full grid grid-cols-3 grid-rows-3 opacity-30">
                   <div className="border-r border-b border-white" />
                   <div className="border-r border-b border-white" />
