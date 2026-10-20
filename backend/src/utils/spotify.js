@@ -153,7 +153,7 @@ async function fetchViaOfficialApi(playlistId, token) {
 
   // Paginate in 100-track batches up to 1000 tracks
   while (hasMore && tracks.length < 1000) {
-    const pageUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&offset=${offset}&fields=items(track(id,name,duration_ms,artists(name),album(name,images))),next,total`;
+    const pageUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&offset=${offset}&fields=items(track(id,name,duration_ms,preview_url,artists(name),album(name,images))),next,total`;
     const tracksRes = await fetch(pageUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -170,6 +170,7 @@ async function fetchViaOfficialApi(playlistId, token) {
             artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
             album: item.track.album?.name || '',
             duration_ms: item.track.duration_ms,
+            preview_url: item.track.preview_url || '',
             cover_url: item.track.album?.images?.[0]?.url || ''
           });
         }

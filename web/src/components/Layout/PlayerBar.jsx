@@ -43,7 +43,7 @@ export default function PlayerBar() {
 
   if (!currentTrack) {
     return (
-      <footer className="h-16 md:h-20 bg-audira-player/95 backdrop-blur-xl border-t border-audira-border/80 flex items-center justify-between px-4 md:px-6 select-none z-30 shrink-0">
+      <footer className="h-16 md:h-20 bg-black/75 backdrop-blur-2xl border-t border-white/10 flex items-center justify-between px-4 md:px-6 select-none z-30 shrink-0">
         <div className="text-xs text-slate-500 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-slate-600 animate-pulse" />
           <span>No track selected. Choose any track to begin listening.</span>
@@ -56,7 +56,7 @@ export default function PlayerBar() {
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <footer className="relative bg-audira-player/95 backdrop-blur-2xl border-t border-audira-border/80 select-none z-30 shrink-0">
+    <footer className="relative bg-black/80 backdrop-blur-2xl border-t border-white/10 select-none z-30 shrink-0">
       {/* Top Scrubber Line on Mobile */}
       <div className="sm:hidden absolute top-0 left-0 right-0 h-1 bg-white/10">
         <div

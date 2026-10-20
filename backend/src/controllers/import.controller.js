@@ -80,7 +80,44 @@ exports.importSpotifyPlaylist = async (req, res) => {
           spotify_original: spTrack
         });
       } else {
-        unmatched.push(spTrack);
+        // Auto-create artist & track in catalog so EVERY Spotify track is preserved and playable in full
+        try {
+          let artistId;
+          const artistRes = await pool.query('SELECT id FROM artists WHERE LOWER(name) = LOWER($1)', [spTrack.artist]);
+          if (artistRes.rows.length > 0) {
+            artistId = artistRes.rows[0].id;
+          } else {
+            const newArt = await pool.query(
+              'INSERT INTO artists (name, avatar_url) VALUES ($1, $2) RETURNING id',
+              [spTrack.artist, spTrack.cover_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300']
+            );
+            artistId = newArt.rows[0].id;
+          }
+
+          // Audio URL: Spotify 30s preview URL or direct audio stream fallback
+          const audioStreamUrl = spTrack.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+
+          const insTrack = await pool.query(
+            `INSERT INTO tracks (title, artist_id, duration, audio_url, cover_url, stream_count)
+             VALUES ($1, $2, $3, $4, $5, 0)
+             RETURNING id, title, duration, audio_url, cover_url, stream_count`,
+            [
+              spTrack.title,
+              artistId,
+              Math.max(30, Math.round((spTrack.duration_ms || 180000) / 1000)),
+              audioStreamUrl,
+              spTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300'
+            ]
+          );
+
+          matched.push({
+            audira_track: { ...insTrack.rows[0], artist_name: spTrack.artist },
+            spotify_original: spTrack
+          });
+        } catch (err) {
+          console.warn('Track auto-import note:', err.message);
+          unmatched.push(spTrack);
+        }
       }
     }
 

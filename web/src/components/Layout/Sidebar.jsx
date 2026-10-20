@@ -73,7 +73,7 @@ export default function Sidebar({
           fixed md:static inset-y-0 left-0 z-50
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
-          w-72 bg-audira-sidebar flex flex-col border-r border-audira-border/80 h-full select-none
+          w-72 bg-black/40 backdrop-blur-2xl flex flex-col border-r border-white/5 h-full select-none
           transition-all duration-300 ease-in-out shrink-0
         `}
       >
@@ -83,17 +83,15 @@ export default function Sidebar({
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] flex items-center justify-center shadow-lg shadow-purple-900/30 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-[#0D0E15] rounded-[10px] flex items-center justify-center">
-                <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-purple-400 to-cyan-300 text-lg">A</span>
-              </div>
+            <div className="w-9 h-9 rounded-xl p-1 bg-white/5 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <img src="/brand/logo.svg" alt="Linear" className="w-full h-full object-contain" />
             </div>
             {(!isCollapsed || isMobileOpen) && (
               <div>
-                <h1 className="font-black tracking-wider text-lg bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent leading-tight">
-                  AUDIRA
+                <h1 className="font-black tracking-tight text-xl text-white leading-tight">
+                  Linear
                 </h1>
-                <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">Music Free</p>
+                <p className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">Stream Music</p>
               </div>
             )}
           </div>
@@ -243,7 +241,7 @@ export default function Sidebar({
 
         {/* Discord-style User Profile Dock at bottom */}
         {isAuthenticated && user ? (
-          <div className="p-3 border-t border-white/[0.04] bg-[#07080D]/90 backdrop-blur-md">
+          <div className="p-3 border-t border-white/[0.04] bg-black/40 backdrop-blur-md">
             <button
               onClick={() => handleNavClick('profile')}
               title={`View ${user.display_name}'s Profile`}
@@ -281,7 +279,7 @@ export default function Sidebar({
             </button>
           </div>
         ) : (
-          <div className="p-3 border-t border-white/[0.04] bg-[#07080D]/90">
+          <div className="p-3 border-t border-white/[0.04] bg-black/40">
             <button
               onClick={() => openAuth('login')}
               className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 transition text-center"

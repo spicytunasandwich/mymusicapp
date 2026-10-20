@@ -60,7 +60,7 @@ export default function SpotifyImportView({ onSelectPlaylist }) {
 
     const t2 = setTimeout(() => {
       setImportProgress(78);
-      setImportPhase('Cross-referencing songs with Audira music catalog...');
+      setImportPhase('Cross-referencing songs with Linear music catalog...');
     }, 2200);
 
     return () => {
@@ -327,7 +327,7 @@ export default function SpotifyImportView({ onSelectPlaylist }) {
                 <div className="space-y-3">
                   {importResult.unmatched_tracks?.length === 0 ? (
                     <div className="p-8 text-center bg-emerald-950/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs">
-                      🎉 All songs from this Spotify playlist were successfully matched into your Audira library!
+                      🎉 All songs from this Spotify playlist were successfully matched into your Linear library!
                     </div>
                   ) : (
                     <div className="max-h-80 overflow-y-auto border border-audira-border rounded-xl divide-y divide-audira-border/30 bg-[#0D0E15]">
@@ -367,7 +367,7 @@ export default function SpotifyImportView({ onSelectPlaylist }) {
                         </div>
                         <div className="truncate">
                           <p className="font-bold text-slate-200 truncate">{track.title}</p>
-                          <p className="text-[11px] text-slate-400 truncate">{track.artist_name || 'Audira Catalog'}</p>
+                          <p className="text-[11px] text-slate-400 truncate">{track.artist_name || 'Linear Catalog'}</p>
                         </div>
                       </div>
                       <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 shrink-0 font-semibold">
@@ -452,7 +452,7 @@ export default function SpotifyImportView({ onSelectPlaylist }) {
                   setSearchQuery(e.target.value);
                   performSearch(e.target.value);
                 }}
-                placeholder="Search Audira catalog for title or artist..."
+                placeholder="Search Linear catalog for title or artist..."
                 className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition"
               />
             </div>
@@ -462,11 +462,11 @@ export default function SpotifyImportView({ onSelectPlaylist }) {
               {searching ? (
                 <div className="p-6 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
                   <Loader2 size={16} className="animate-spin text-purple-400" />
-                  <span>Searching Audira catalog...</span>
+                  <span>Searching Linear catalog...</span>
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500">
-                  No matching tracks found in Audira catalog for "{searchQuery}".
+                  No matching tracks found in Linear catalog for "{searchQuery}".
                 </div>
               ) : (
                 searchResults.map(track => (

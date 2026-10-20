@@ -61,7 +61,13 @@ export function AuthProvider({ children }) {
 
   const signup = async ({ email, password, username, display_name }) => {
     const data = await api.post('/auth/signup', { email, password, username, display_name });
-    // User must verify 6-digit code before session token is granted
+    if (data.token) {
+      localStorage.setItem('audira_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      applyUserTheme(data.user);
+      setAuthModalOpen(false);
+    }
     return data;
   };
 

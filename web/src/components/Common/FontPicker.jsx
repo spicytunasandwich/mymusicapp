@@ -22,7 +22,7 @@ export const BUNDLED_FONTS = [
 export default function FontPicker({
   selectedFont = 'Plus Jakarta Sans',
   onSelectFont,
-  previewText = 'Audira Sound'
+  previewText = 'Linear Sound'
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const activeFont = BUNDLED_FONTS.find(f => f.id === selectedFont) || BUNDLED_FONTS[0];

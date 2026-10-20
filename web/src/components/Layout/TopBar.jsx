@@ -24,7 +24,7 @@ export default function TopBar({ onOpenProfile, onOpenSettings, onToggleMobileSi
   }, []);
 
   return (
-    <header className="h-16 px-4 md:px-6 flex items-center justify-between border-b border-audira-border/80 bg-audira-bg/85 backdrop-blur-xl sticky top-0 z-30 select-none app-drag transition-colors">
+    <header className="h-16 px-4 md:px-6 flex items-center justify-between border-b border-white/5 bg-black/25 backdrop-blur-xl sticky top-0 z-30 select-none app-drag transition-colors">
       {/* Left controls: Mobile Menu + History Navigation */}
       <div className="flex items-center gap-2 no-drag">
         {/* Mobile Hamburger Menu */}

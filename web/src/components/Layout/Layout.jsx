@@ -20,8 +20,11 @@ export default function Layout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-audira-bg overflow-hidden text-slate-100 select-none">
-      {/* Upper viewport: Sidebar + Main Content Area */}
+    <div
+      className="h-screen w-screen flex flex-col overflow-hidden text-slate-100 select-none transition-colors duration-300"
+      style={{ background: 'var(--audira-bg-gradient)' }}
+    >
+      {/* Upper viewport: Sidebar (left) + Main Content Area (right) - both seamlessly unified */}
       <div className="flex-1 flex overflow-hidden relative">
         <Sidebar
           activeView={activeView}
@@ -34,10 +37,7 @@ export default function Layout({
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        <div
-          className="flex-1 flex flex-col overflow-hidden min-w-0 transition-colors duration-300"
-          style={{ background: 'var(--audira-bg-gradient)' }}
-        >
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-transparent">
           <TopBar
             onOpenProfile={onOpenProfile}
             onOpenSettings={onOpenSettings}

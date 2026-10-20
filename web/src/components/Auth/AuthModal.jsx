@@ -145,28 +145,29 @@ export default function AuthModal() {
   const handleSignup = async (e) => {
     e.preventDefault();
     resetMessages();
+
+    const cleanUser = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (cleanUser.length < 3) {
+      setError('Username must be at least 3 characters long.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const data = await signup({
+      await signup({
         email,
         password,
-        username,
+        username: cleanUser,
         display_name: displayName
       });
-      if (data?.requires_verification) {
-        setCooldown(data.cooldown || 60);
-        setMode('verify');
-        setSuccess('Verification code sent! Please check your email.');
-      }
+      closeAuth();
     } catch (err) {
-      if (err.data?.requires_verification) {
-        setCooldown(err.data.cooldown || 60);
-        setMode('verify');
-        setError(err.message);
-      } else {
-        setError(err.message || 'Signup failed. Please try again.');
-      }
+      setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -476,14 +477,15 @@ export default function AuthModal() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Username Handle</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Username Handle (min 3 chars)</label>
                 <div className="relative">
                   <AtSign size={16} className="absolute left-3 top-3 text-slate-500" />
                   <input
                     type="text"
                     required
+                    minLength={3}
                     disabled={loading}
-                    placeholder="e.g. audiophile"
+                    placeholder="e.g. linear_sound"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
@@ -508,14 +510,15 @@ export default function AuthModal() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password (min 8 chars)</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-3 text-slate-500" />
                   <input
                     type="password"
                     required
+                    minLength={8}
                     disabled={loading}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
@@ -531,11 +534,11 @@ export default function AuthModal() {
                 {loading ? (
                   <>
                     <Loader2 size={15} className="animate-spin text-white" />
-                    <span>Creating account & sending code...</span>
+                    <span>Creating account...</span>
                   </>
                 ) : (
                   <>
-                    <span>Create Account & Get 6-Digit Code</span>
+                    <span>Create Account & Start Listening</span>
                     <ArrowRight size={15} />
                   </>
                 )}

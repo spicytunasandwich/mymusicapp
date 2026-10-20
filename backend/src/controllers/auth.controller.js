@@ -25,7 +25,7 @@ function generate6DigitCode() {
 
 const ACCENT_COLORS = ['#7C3AED', '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#06B6D4', '#8B5CF6'];
 
-// 1. SIGNUP (Creates unverified account and sends 6-digit code, NO ACCESS until verified)
+// 1. SIGNUP (Instant Access, Password >= 8, Username >= 3, No Blocking Email Verification)
 exports.signup = async (req, res) => {
   try {
     const { email, password, username, display_name } = req.body;
@@ -34,87 +34,43 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Email, username, and password are required.' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+    }
+    if (cleanUsername.length > 30) {
+      return res.status(400).json({ error: 'Username cannot exceed 30 characters.' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-
-    if (cleanUsername.length < 3 || cleanUsername.length > 30) {
-      return res.status(400).json({ error: 'Username must be 3-30 alphanumeric characters.' });
-    }
 
     // Check existing email or username
     const existing = await pool.query(
-      'SELECT id, email, username, is_verified, verification_last_sent_at FROM users WHERE email = $1 OR username = $2',
+      'SELECT id, email, username FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2',
       [cleanEmail, cleanUsername]
     );
 
     if (existing.rows.length > 0) {
       const match = existing.rows[0];
-      // If user exists and is already verified, block signup
-      if (match.is_verified) {
-        if (match.email.toLowerCase() === cleanEmail) {
-          return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
-        }
-        return res.status(409).json({ error: 'Username is already taken.' });
-      }
-
-      // If user exists but is NOT verified yet, update password and send a fresh code (with cooldown)
       if (match.email.toLowerCase() === cleanEmail) {
-        const lastSent = match.verification_last_sent_at ? new Date(match.verification_last_sent_at).getTime() : 0;
-        const cooldownRemaining = Math.max(0, Math.ceil((60000 - (Date.now() - lastSent)) / 1000));
-
-        if (cooldownRemaining > 0) {
-          return res.status(429).json({
-            error: `A verification code was recently sent. Please wait ${cooldownRemaining}s before requesting again.`,
-            cooldown: cooldownRemaining,
-            requires_verification: true,
-            email: cleanEmail
-          });
-        }
-
-        const passwordHash = await bcrypt.hash(password, 10);
-        const code = generate6DigitCode();
-        await pool.query(
-          `UPDATE users
-           SET password_hash = $1, username = $2, display_name = $3,
-               verification_code = $4, verification_code_expires_at = NOW() + INTERVAL '10 minutes',
-               verification_attempts = 0, verification_last_sent_at = NOW()
-           WHERE id = $5`,
-          [passwordHash, cleanUsername, display_name?.trim() || cleanUsername, code, match.id]
-        );
-
-        sendEmail({
-          to: cleanEmail,
-          subject: `${code} is your Audira verification code`,
-          html: getVerificationEmailHtml(display_name || cleanUsername, code),
-          text: `Your Audira verification code is: ${code} (expires in 10 minutes, max 5 attempts).`
-        }).catch(err => console.error('Verification email error:', err));
-
-        return res.status(200).json({
-          message: 'Account pending verification. A 6-digit code has been sent to your email.',
-          email: cleanEmail,
-          requires_verification: true,
-          cooldown: 60
-        });
+        return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
       }
-
       return res.status(409).json({ error: 'Username is already taken.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const code = generate6DigitCode();
     const randomAccent = ACCENT_COLORS[Math.floor(Math.random() * ACCENT_COLORS.length)];
     const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}&backgroundColor=12131f`;
 
     const userResult = await pool.query(
       `INSERT INTO users (
         email, password_hash, username, display_name, avatar_url,
-        accent_color, is_verified, verification_code, verification_code_expires_at,
-        verification_attempts, verification_last_sent_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, false, $7, NOW() + INTERVAL '10 minutes', 0, NOW())
+        accent_color, is_verified, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
       RETURNING id, email, username, display_name, avatar_url, accent_color, is_verified, created_at`,
       [
         cleanEmail,
@@ -122,8 +78,7 @@ exports.signup = async (req, res) => {
         cleanUsername,
         display_name?.trim() || cleanUsername,
         defaultAvatar,
-        randomAccent,
-        code
+        randomAccent
       ]
     );
 
@@ -131,26 +86,24 @@ exports.signup = async (req, res) => {
 
     // Initialize default user settings
     await pool.query(
-      `INSERT INTO user_settings (user_id, theme_accent, theme_mode)
-       VALUES ($1, $2, 'dark') ON CONFLICT (user_id) DO NOTHING`,
+      `INSERT INTO user_settings (user_id, theme_accent, theme_mode, gradient_top, gradient_bottom)
+       VALUES ($1, $2, 'dark', '#1A102E', '#08090E') ON CONFLICT (user_id) DO NOTHING`,
       [newUser.id, randomAccent]
     );
 
-    // Send 6-digit verification email
-    sendEmail({
-      to: newUser.email,
-      subject: `${code} is your Audira verification code`,
-      html: getVerificationEmailHtml(newUser.display_name, code),
-      text: `Your Audira verification code is: ${code} (expires in 10 minutes, max 5 attempts).`
-    }).catch(err => console.error('Verification email error:', err));
+    // Issue JWT token immediately for instant login
+    const token = generateJwt(newUser);
 
-    // Notice: NO JWT TOKEN issued until verified!
     res.status(201).json({
-      message: 'Account created. Please enter the 6-digit verification code sent to your email.',
-      email: newUser.email,
-      requires_verification: true,
-      cooldown: 60
+      message: 'Account created successfully! Welcome to Linear.',
+      token,
+      user: newUser
     });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Failed to create account.' });
+  }
+};
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Failed to create account.' });
@@ -337,7 +290,7 @@ exports.resendCode = async (req, res) => {
   }
 };
 
-// 4. LOGIN (Blocks access if unverified, sends code with cooldown)
+// 4. LOGIN (Instant Access, No Email Code Roadblock)
 exports.login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -346,7 +299,7 @@ exports.login = async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT u.*, s.theme_accent, s.theme_mode, s.home_widget_order
+      `SELECT u.*, s.theme_accent, s.gradient_top, s.gradient_bottom, s.theme_mode, s.home_widget_order
        FROM users u
        LEFT JOIN user_settings s ON s.user_id = u.id
        WHERE LOWER(u.email) = LOWER($1) OR LOWER(u.username) = LOWER($1)`,
@@ -367,40 +320,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // REQUIRE VERIFICATION: No access until verified!
+    // Ensure is_verified is true
     if (!user.is_verified) {
-      const lastSent = user.verification_last_sent_at ? new Date(user.verification_last_sent_at).getTime() : 0;
-      const elapsed = Date.now() - lastSent;
-      let cooldown = 0;
-
-      // If last sent > 60s ago or expired, send a fresh code
-      if (elapsed >= 60000 || !user.verification_code || (user.verification_code_expires_at && new Date(user.verification_code_expires_at) < new Date())) {
-        const code = generate6DigitCode();
-        await pool.query(
-          `UPDATE users
-           SET verification_code = $1, verification_code_expires_at = NOW() + INTERVAL '10 minutes',
-               verification_attempts = 0, verification_last_sent_at = NOW()
-           WHERE id = $2`,
-          [code, user.id]
-        );
-
-        sendEmail({
-          to: user.email,
-          subject: `${code} is your Audira verification code`,
-          html: getVerificationEmailHtml(user.display_name, code),
-          text: `Your Audira verification code is: ${code} (expires in 10 minutes).`
-        }).catch(err => console.error('Verification email error:', err));
-        cooldown = 60;
-      } else {
-        cooldown = Math.ceil((60000 - elapsed) / 1000);
-      }
-
-      return res.status(403).json({
-        error: 'Your email address is not verified yet. Please enter the 6-digit code sent to your email.',
-        requires_verification: true,
-        email: user.email,
-        cooldown
-      });
+      await pool.query('UPDATE users SET is_verified = true WHERE id = $1', [user.id]);
+      user.is_verified = true;
     }
 
     const token = generateJwt(user);
@@ -409,7 +332,7 @@ exports.login = async (req, res) => {
     delete user.reset_code;
 
     res.json({
-      message: 'Login successful',
+      message: 'Login successful! Welcome back.',
       token,
       user
     });

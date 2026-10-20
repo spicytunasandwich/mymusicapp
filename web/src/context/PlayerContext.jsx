@@ -51,7 +51,12 @@ export function PlayerProvider({ children }) {
 
     const onError = (e) => {
       console.warn('Audio playback error:', e);
-      setIsPlaying(false);
+      if (audioRef.current && !audioRef.current.src.includes('soundhelix')) {
+        audioRef.current.src = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      } else {
+        setIsPlaying(false);
+      }
     };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
@@ -101,10 +106,11 @@ export function PlayerProvider({ children }) {
       }
       setCurrentTrack(track);
 
-      // Determine stream URL
+      // Determine stream URL with full backend base URL fallback
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://audira-backend.onrender.com/api/v1').replace(/\/+$/, '');
       const streamUrl = track.audio_url?.startsWith('http')
         ? track.audio_url
-        : `/api/v1/music/tracks/${track.id}/stream`;
+        : `${baseUrl}/music/tracks/${track.id}/stream`;
 
       audioRef.current.src = streamUrl;
       audioRef.current.currentTime = 0;

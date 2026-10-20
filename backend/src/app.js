@@ -76,7 +76,7 @@ app.use('/api/v1/import', importRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.json({
-    name: 'Audira Music Streaming Platform API',
+    name: 'Linear Music Streaming Platform API',
     version: 'v1',
     docs: '/api/v1/health'
   });
