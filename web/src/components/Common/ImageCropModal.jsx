@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ZoomIn, ZoomOut, Check, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Check, RotateCcw, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ImageCropModal({
   isOpen,
@@ -14,6 +14,8 @@ export default function ImageCropModal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageSrc, setImageSrc] = useState(null);
   const [isGif, setIsGif] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   const imageRef = useRef(null);
@@ -29,38 +31,82 @@ export default function ImageCropModal({
   const boxWidth = isAvatar ? 280 : 440;
   const boxHeight = isAvatar ? 280 : Math.round(440 / (8 / 3)); // 165px
 
+  // Keyboard Escape listener to cleanly dismiss stuck overlay
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Object URL lifecycle management
   useEffect(() => {
     if (!imageFile) {
       setImageSrc(null);
+      setImageLoaded(false);
+      setLoadError(false);
       return;
     }
 
-    const gif = imageFile.type === 'image/gif' || imageFile.name.toLowerCase().endsWith('.gif');
+    const gif = imageFile.type === 'image/gif' || imageFile.name?.toLowerCase().endsWith('.gif');
     setIsGif(gif);
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImageSrc(objectUrl);
-    setZoom(1);
-    setOffset({ x: 0, y: 0 });
+    let url = null;
+    try {
+      url = URL.createObjectURL(imageFile);
+      setImageSrc(url);
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+      setImageLoaded(false);
+      setLoadError(false);
+    } catch (err) {
+      console.error('Failed to create object URL for crop modal:', err);
+      setLoadError(true);
+    }
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (url) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (_) {}
+      }
     };
   }, [imageFile]);
 
-  if (!isOpen || !imageFile || !imageSrc) return null;
+  // Attach non-passive wheel listener to container so e.preventDefault() never throws an error
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || isGif) return;
+
+    const handleWheelNonPassive = (e) => {
+      e.preventDefault();
+      const zoomDelta = e.deltaY * -0.0015;
+      setZoom(prev => Math.min(4, Math.max(1, prev + zoomDelta)));
+    };
+
+    container.addEventListener('wheel', handleWheelNonPassive, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheelNonPassive);
+    };
+  }, [isGif, imageSrc, imageLoaded]);
+
+  if (!isOpen || !imageFile) return null;
 
   const touchDistance = useRef(null);
 
   // Drag handlers for interactive panning & pinch zoom
   const handleMouseDown = (e) => {
-    if (isGif) return; // GIFs are not cropped with 2D canvas to preserve animation
+    if (isGif || loadError) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging || isGif) return;
+    if (!isDragging || isGif || loadError) return;
     setOffset({
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y
@@ -72,15 +118,8 @@ export default function ImageCropModal({
     touchDistance.current = null;
   };
 
-  const handleWheel = (e) => {
-    if (isGif) return;
-    e.preventDefault();
-    const zoomDelta = e.deltaY * -0.0015;
-    setZoom(prev => Math.min(4, Math.max(1, prev + zoomDelta)));
-  };
-
   const handleTouchStart = (e) => {
-    if (isGif) return;
+    if (isGif || loadError) return;
     if (e.touches.length === 2) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
@@ -97,7 +136,7 @@ export default function ImageCropModal({
   };
 
   const handleTouchMove = (e) => {
-    if (isGif) return;
+    if (isGif || loadError) return;
     if (e.touches.length === 2 && touchDistance.current) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
@@ -120,8 +159,8 @@ export default function ImageCropModal({
   };
 
   const handleConfirm = async () => {
-    // For animated GIFs: Return original untouched File to prevent canvas flattening
-    if (isGif) {
+    // For animated GIFs or fallback on load error: Return original untouched File
+    if (isGif || loadError) {
       onApply(imageFile);
       return;
     }
@@ -129,37 +168,40 @@ export default function ImageCropModal({
     setProcessing(true);
     try {
       const img = imageRef.current;
+      if (!img || !img.naturalWidth || !img.naturalHeight) {
+        onApply(imageFile);
+        setProcessing(false);
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        onApply(imageFile);
+        setProcessing(false);
+        return;
+      }
 
-      // Scale factors from preview box to target storage resolution
       const scaleToTarget = targetWidth / boxWidth;
-
-      // Draw background
       ctx.fillStyle = '#0B0C14';
       ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-      // Natural image aspect ratio
       const naturalAspect = img.naturalWidth / img.naturalHeight;
       let renderW, renderH;
 
       if (naturalAspect > aspectRatio) {
-        // Image is wider than crop box
         renderH = boxHeight * zoom;
         renderW = renderH * naturalAspect;
       } else {
-        // Image is taller than crop box
         renderW = boxWidth * zoom;
         renderH = renderW / naturalAspect;
       }
 
-      // Center offset + user manual pan offset
       const posX = (boxWidth - renderW) / 2 + offset.x;
       const posY = (boxHeight - renderH) / 2 + offset.y;
 
-      // Draw scaled and translated to target canvas
       ctx.drawImage(
         img,
         posX * scaleToTarget,
@@ -168,30 +210,37 @@ export default function ImageCropModal({
         renderH * scaleToTarget
       );
 
-      // Export as WebP / PNG Blob
       const mimeType = imageFile.type === 'image/png' ? 'image/png' : 'image/webp';
       canvas.toBlob(
         (blob) => {
           if (!blob) {
             onApply(imageFile);
-            return;
+          } else {
+            const croppedFile = new File([blob], imageFile.name, { type: mimeType });
+            onApply(croppedFile);
           }
-          const croppedFile = new File([blob], imageFile.name, { type: mimeType });
-          onApply(croppedFile);
           setProcessing(false);
         },
         mimeType,
         0.92
       );
     } catch (err) {
-      console.error('Crop processing failed, falling back to original:', err);
+      console.warn('Crop canvas processing failed, applying original image safely:', err);
       onApply(imageFile);
       setProcessing(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div
+      onClick={(e) => {
+        // Outside click on backdrop cleanly dismisses the modal
+        if (e.target === e.currentTarget && !processing) {
+          onClose?.();
+        }
+      }}
+      className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+    >
       <div className="w-full max-w-lg bg-[#11121C] border border-[#23263B] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#23263B]">
@@ -204,8 +253,10 @@ export default function ImageCropModal({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+            disabled={processing}
+            className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition disabled:opacity-50"
           >
             <X size={18} />
           </button>
@@ -220,42 +271,55 @@ export default function ImageCropModal({
             </div>
           )}
 
+          {loadError && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-red-900/30 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+              <AlertCircle size={15} className="text-red-400 shrink-0" />
+              <span>Image preview unavailable. Click "Use Original" to proceed or Cancel.</span>
+            </div>
+          )}
+
           <div
             ref={containerRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleMouseUp}
             style={{ width: `${boxWidth}px`, height: `${boxHeight}px` }}
-            className={`relative overflow-hidden bg-[#07080E] border-2 border-audira-accent/60 shadow-inner select-none ${
+            className={`relative overflow-hidden bg-[#07080E] border-2 border-[#1DB954]/60 shadow-inner select-none ${
               isAvatar ? 'rounded-full' : 'rounded-2xl'
-            } ${!isGif ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            } ${!isGif && !loadError ? 'cursor-grab active:cursor-grabbing' : ''}`}
           >
             {/* Image to be cropped/previewed */}
-            <img
-              ref={imageRef}
-              src={imageSrc}
-              alt="Crop preview"
-              draggable={false}
-              className={`w-full h-full object-cover transition-transform ${
-                isGif ? '' : 'pointer-events-none'
-              }`}
-              style={
-                !isGif
-                  ? {
-                      transform: `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
-                      transformOrigin: 'center'
-                    }
-                  : undefined
-              }
-            />
+            {imageSrc && (
+              <img
+                ref={imageRef}
+                src={imageSrc}
+                alt="Crop preview"
+                draggable={false}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  console.warn('Failed to load image preview');
+                  setLoadError(true);
+                }}
+                className={`w-full h-full object-cover transition-transform ${
+                  isGif ? '' : 'pointer-events-none'
+                }`}
+                style={
+                  !isGif && !loadError
+                    ? {
+                        transform: `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
+                        transformOrigin: 'center'
+                      }
+                    : undefined
+                }
+              />
+            )}
 
             {/* Viewfinder Overlay Guide */}
-            {!isGif && (
+            {!isGif && !loadError && (
               <div className={`absolute inset-0 pointer-events-none border border-white/20 ${isAvatar ? 'rounded-full' : ''}`}>
                 <div className="w-full h-full grid grid-cols-3 grid-rows-3 opacity-30">
                   <div className="border-r border-b border-white" />
@@ -264,8 +328,8 @@ export default function ImageCropModal({
                   <div className="border-r border-b border-white" />
                   <div className="border-r border-b border-white" />
                   <div className="border-b border-white" />
-                  <div className="border-r border-white" />
-                  <div className="border-r border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-r border-b border-white" />
                   <div />
                 </div>
               </div>
@@ -273,7 +337,7 @@ export default function ImageCropModal({
           </div>
 
           {/* Interactive Zoom Controls (for non-GIFs) */}
-          {!isGif && (
+          {!isGif && !loadError && (
             <div className="w-full max-w-xs flex items-center gap-3 mt-5 px-2">
               <ZoomOut size={16} className="text-slate-400 shrink-0" />
               <input
@@ -283,7 +347,7 @@ export default function ImageCropModal({
                 step="0.02"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-full accent-audira-accent cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                className="w-full accent-[#1DB954] cursor-pointer h-1.5 bg-slate-800 rounded-lg"
               />
               <ZoomIn size={16} className="text-slate-400 shrink-0" />
               <button
@@ -297,7 +361,7 @@ export default function ImageCropModal({
             </div>
           )}
 
-          {!isGif && (
+          {!isGif && !loadError && (
             <p className="text-[11px] text-slate-500 mt-2">
               Drag to reposition • Scroll slider to zoom
             </p>
@@ -318,17 +382,17 @@ export default function ImageCropModal({
             type="button"
             onClick={handleConfirm}
             disabled={processing}
-            className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-50 cursor-pointer"
+            className="px-5 py-2 rounded-xl text-xs font-bold bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center gap-2 shadow-lg shadow-[#1DB954]/20 hover:scale-102 active:scale-98 transition disabled:opacity-50 cursor-pointer"
           >
             {processing ? (
               <>
-                <Loader2 size={14} className="animate-spin text-white" />
-                <span>Processing HD...</span>
+                <Loader2 size={14} className="animate-spin text-black" />
+                <span>Processing...</span>
               </>
             ) : (
               <>
                 <Check size={15} />
-                <span>Apply & Upload</span>
+                <span>{loadError ? 'Use Original' : 'Apply & Upload'}</span>
               </>
             )}
           </button>

@@ -12,18 +12,30 @@ export function AuthProvider({ children }) {
 
   const applyUserTheme = (userData) => {
     if (!userData) return;
-    if (userData.theme_accent) {
-      document.documentElement.style.setProperty('--audira-accent', userData.theme_accent);
-      document.documentElement.style.setProperty('--audira-accent-light', userData.theme_accent);
-      document.documentElement.style.setProperty('--audira-accent-glow', `${userData.theme_accent}59`);
-    }
-    if (userData.gradient_top && userData.gradient_bottom) {
-      document.documentElement.style.setProperty('--audira-gradient-top', userData.gradient_top);
-      document.documentElement.style.setProperty('--audira-gradient-bottom', userData.gradient_bottom);
-      document.documentElement.style.setProperty(
-        '--audira-bg-gradient',
-        `linear-gradient(180deg, ${userData.gradient_top} 0%, ${userData.gradient_bottom} 100%)`
-      );
+    try {
+      if (userData.theme_accent && typeof userData.theme_accent === 'string') {
+        const cleanAccent = userData.theme_accent.trim();
+        if (/^#[0-9a-fA-F]{6}$/i.test(cleanAccent)) {
+          document.documentElement.style.setProperty('--audira-accent', cleanAccent);
+          document.documentElement.style.setProperty('--audira-accent-light', cleanAccent);
+          document.documentElement.style.setProperty('--audira-accent-glow', `${cleanAccent}59`);
+        } else if (/^#[0-9a-fA-F]{3,8}$/i.test(cleanAccent)) {
+          document.documentElement.style.setProperty('--audira-accent', cleanAccent);
+          document.documentElement.style.setProperty('--audira-accent-light', cleanAccent);
+        }
+      }
+      if (userData.gradient_top && userData.gradient_bottom) {
+        const top = typeof userData.gradient_top === 'string' && userData.gradient_top.startsWith('#') ? userData.gradient_top : '#1A2E22';
+        const bottom = typeof userData.gradient_bottom === 'string' && userData.gradient_bottom.startsWith('#') ? userData.gradient_bottom : '#121212';
+        document.documentElement.style.setProperty('--audira-gradient-top', top);
+        document.documentElement.style.setProperty('--audira-gradient-bottom', bottom);
+        document.documentElement.style.setProperty(
+          '--audira-bg-gradient',
+          `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`
+        );
+      }
+    } catch (e) {
+      console.warn('Theme application notice:', e.message);
     }
   };
 

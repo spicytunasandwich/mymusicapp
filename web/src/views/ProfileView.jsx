@@ -6,6 +6,7 @@ import {
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/Common/ImageCropModal';
+import ErrorBoundary from '../components/Common/ErrorBoundary';
 import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
 import ColorPicker from '../components/Common/ColorPicker';
 import FontPicker from '../components/Common/FontPicker';
@@ -513,14 +514,36 @@ export default function ProfileView({ username, onSelectPlaylist }) {
         </div>
       )}
 
-      {/* Image Crop & Retina Preview Modal */}
-      <ImageCropModal
-        isOpen={cropModal.isOpen}
-        imageFile={cropModal.file}
-        cropType={cropModal.type}
-        onClose={() => setCropModal({ isOpen: false, file: null, type: 'avatar' })}
-        onApply={handleApplyCrop}
-      />
+      {/* Image Crop & Retina Preview Modal with Error Boundary */}
+      <ErrorBoundary
+        title="Image Crop Error"
+        fallback={(err, reset) => (
+          <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-[#181818] border border-white/10 rounded-2xl p-6 text-center shadow-2xl">
+              <h3 className="text-white font-bold text-sm mb-2">Image Editor Notice</h3>
+              <p className="text-slate-400 text-xs mb-4">{err?.message || 'Failed to process image.'}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setCropModal({ isOpen: false, file: null, type: 'avatar' });
+                  reset();
+                }}
+                className="px-4 py-2 rounded-full bg-[#1DB954] text-black font-bold text-xs shadow hover:scale-105 transition"
+              >
+                Close Editor
+              </button>
+            </div>
+          </div>
+        )}
+      >
+        <ImageCropModal
+          isOpen={cropModal.isOpen}
+          imageFile={cropModal.file}
+          cropType={cropModal.type}
+          onClose={() => setCropModal({ isOpen: false, file: null, type: 'avatar' })}
+          onApply={handleApplyCrop}
+        />
+      </ErrorBoundary>
 
       {/* Public Playlists Showcase */}
       {profile.playlists?.length > 0 && (

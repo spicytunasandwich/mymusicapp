@@ -15,6 +15,7 @@ import ProfileView from './views/ProfileView';
 import SettingsView from './views/SettingsView';
 import SpotifyImportView from './views/SpotifyImportView';
 import { PageTransition } from './components/Common/Motion';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 function AppContent({
   activeView,
@@ -137,19 +138,21 @@ export default function App() {
   };
 
   return (
-    <AuthProvider>
-      <PlayerProvider>
-        <AppContent
-          activeView={activeView}
-          setActiveView={setActiveView}
-          selectedPlaylistId={selectedPlaylistId}
-          handleSelectPlaylist={handleSelectPlaylist}
-          selectedArtistId={selectedArtistId}
-          handleSelectArtist={handleSelectArtist}
-          selectedUsername={selectedUsername}
-          handleOpenProfile={handleOpenProfile}
-        />
-      </PlayerProvider>
-    </AuthProvider>
+    <ErrorBoundary title="Linear encountered an unexpected error">
+      <AuthProvider>
+        <PlayerProvider>
+          <AppContent
+            activeView={activeView}
+            setActiveView={setActiveView}
+            selectedPlaylistId={selectedPlaylistId}
+            handleSelectPlaylist={handleSelectPlaylist}
+            selectedArtistId={selectedArtistId}
+            handleSelectArtist={handleSelectArtist}
+            selectedUsername={selectedUsername}
+            handleOpenProfile={handleOpenProfile}
+          />
+        </PlayerProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
