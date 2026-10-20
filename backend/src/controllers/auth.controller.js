@@ -635,7 +635,7 @@ exports.resetPassword = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.email, u.username, u.display_name, u.bio, u.avatar_url,
+      `SELECT u.id, u.email, u.username, u.display_name, u.display_name_font, u.bio, u.avatar_url,
               u.banner_url, u.accent_color, u.is_verified, u.created_at,
               s.theme_accent, s.gradient_top, s.gradient_bottom, s.theme_mode, s.home_widget_order, s.audio_quality
        FROM users u

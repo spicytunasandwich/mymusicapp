@@ -7,7 +7,7 @@ exports.getPublicProfile = async (req, res) => {
     const cleanUsername = username.trim().toLowerCase();
 
     const userRes = await pool.query(
-      `SELECT id, username, display_name, bio, avatar_url, banner_url,
+      `SELECT id, username, display_name, display_name_font, bio, avatar_url, banner_url,
               accent_color, is_verified, created_at
        FROM users
        WHERE LOWER(username) = $1`,
@@ -60,19 +60,28 @@ exports.getPublicProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { display_name, bio, accent_color, avatar_url, banner_url } = req.body;
+    const { display_name, display_name_font, bio, accent_color, avatar_url, banner_url } = req.body;
 
     const result = await pool.query(
       `UPDATE users
        SET display_name = COALESCE($1, display_name),
-           bio = COALESCE($2, bio),
-           accent_color = COALESCE($3, accent_color),
-           avatar_url = COALESCE($4, avatar_url),
-           banner_url = COALESCE($5, banner_url),
+           display_name_font = COALESCE($2, display_name_font),
+           bio = COALESCE($3, bio),
+           accent_color = COALESCE($4, accent_color),
+           avatar_url = COALESCE($5, avatar_url),
+           banner_url = COALESCE($6, banner_url),
            updated_at = NOW()
-       WHERE id = $6
-       RETURNING id, email, username, display_name, bio, avatar_url, banner_url, accent_color, is_verified, updated_at`,
-      [display_name?.trim(), bio !== undefined ? bio.trim() : null, accent_color, avatar_url, banner_url, userId]
+       WHERE id = $7
+       RETURNING id, email, username, display_name, display_name_font, bio, avatar_url, banner_url, accent_color, is_verified, updated_at`,
+      [
+        display_name?.trim(),
+        display_name_font?.trim(),
+        bio !== undefined ? bio.trim() : null,
+        accent_color,
+        avatar_url,
+        banner_url,
+        userId
+      ]
     );
 
     res.json({

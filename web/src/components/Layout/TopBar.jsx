@@ -77,7 +77,10 @@ export default function TopBar({ onOpenProfile, onOpenSettings, onToggleMobileSi
                 </div>
                 <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#0B0C14]" />
               </div>
-              <span className="text-xs font-semibold text-slate-200 max-w-[120px] truncate">
+              <span
+                className="text-xs font-semibold text-slate-200 max-w-[120px] truncate"
+                style={{ fontFamily: user.display_name_font || 'inherit' }}
+              >
                 {user.display_name || user.username}
               </span>
             </button>
@@ -98,7 +101,12 @@ export default function TopBar({ onOpenProfile, onOpenSettings, onToggleMobileSi
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-white truncate">{user.display_name}</p>
+                    <p
+                      className="font-bold text-white truncate"
+                      style={{ fontFamily: user.display_name_font || 'inherit' }}
+                    >
+                      {user.display_name}
+                    </p>
                     <p className="text-[11px] text-slate-400 truncate">@{user.username}</p>
                   </div>
                 </div>

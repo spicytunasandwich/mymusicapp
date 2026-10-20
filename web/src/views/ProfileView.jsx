@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/Common/ImageCropModal';
 import { ProfileHeaderSkeleton } from '../components/Common/SkeletonLoader';
 import ColorPicker from '../components/Common/ColorPicker';
+import FontPicker from '../components/Common/FontPicker';
 
 const ACCENTS = [
   '#8B5CF6', '#7C3AED', '#3B82F6', '#06B6D4',
@@ -25,6 +26,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
 
   // Edit fields
   const [displayName, setDisplayName] = useState('');
+  const [displayNameFont, setDisplayNameFont] = useState('Plus Jakarta Sans');
   const [bio, setBio] = useState('');
   const [accentColor, setAccentColor] = useState('#8B5CF6');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -41,6 +43,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
       .then(res => {
         setProfile(res.profile);
         setDisplayName(res.profile.display_name || '');
+        setDisplayNameFont(res.profile.display_name_font || 'Plus Jakarta Sans');
         setBio(res.profile.bio || '');
         setAccentColor(res.profile.accent_color || '#8B5CF6');
         setAvatarUrl(res.profile.avatar_url || '');
@@ -102,6 +105,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
     try {
       const res = await api.patch('/users/profile', {
         display_name: displayName,
+        display_name_font: displayNameFont,
         bio,
         accent_color: accentColor,
         avatar_url: avatarUrl,
@@ -186,7 +190,12 @@ export default function ProfileView({ username, onSelectPlaylist }) {
 
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-2xl sm:text-3xl font-black text-white">{profile.display_name}</h1>
+                <h1
+                  className="text-2xl sm:text-3xl font-black text-white transition-all"
+                  style={{ fontFamily: profile.display_name_font || 'Plus Jakarta Sans' }}
+                >
+                  {profile.display_name}
+                </h1>
                 {profile.is_verified && (
                   <span title="Verified Listener">
                     <ShieldCheck size={22} className="text-cyan-400 fill-cyan-400/20" />
@@ -228,8 +237,8 @@ export default function ProfileView({ username, onSelectPlaylist }) {
       {/* Edit Profile Modal */}
       {isEditing && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-audira-card border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animation-scale-up">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+          <div className="w-full max-w-lg bg-audira-card border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animation-scale-up max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
               <h3 className="font-black text-white text-base">Edit Public Profile</h3>
               <button
                 onClick={() => setIsEditing(false)}
@@ -239,16 +248,24 @@ export default function ProfileView({ username, onSelectPlaylist }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4 pt-4 text-xs">
+            <form onSubmit={handleSaveProfile} className="space-y-4 pt-4 text-xs overflow-y-auto pr-1 flex-1">
               <div>
                 <label className="font-bold text-slate-400 block mb-1">Display Name</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500 font-bold"
+                  style={{ fontFamily: displayNameFont }}
                 />
               </div>
+
+              {/* Locally Bundled Curated Font Picker */}
+              <FontPicker
+                selectedFont={displayNameFont}
+                onSelectFont={setDisplayNameFont}
+                previewText={displayName || profile?.display_name}
+              />
 
               <div>
                 <label className="font-bold text-slate-400 block mb-1">About Me (Bio)</label>

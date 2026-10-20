@@ -265,7 +265,10 @@ export default function Sidebar({
 
               {(!isCollapsed || isMobileOpen) && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
+                  <p
+                    className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition"
+                    style={{ fontFamily: user.display_name_font || 'inherit' }}
+                  >
                     {user.display_name}
                   </p>
                   <p className="text-[10px] text-slate-500 truncate">@{user.username}</p>
