@@ -74,7 +74,7 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
                       className="w-16 h-16 object-cover shrink-0 shadow-md"
                     />
                     <div className="flex-1 px-3.5 min-w-0">
-                      <p className={`text-xs font-bold truncate ${isItemPlaying ? 'text-purple-400' : 'text-white'}`}>
+                      <p className={`text-xs font-bold truncate ${isItemPlaying ? 'text-[#1DB954]' : 'text-white'}`}>
                         {item.title}
                       </p>
                       {isTrack && (
@@ -169,7 +169,7 @@ export default function HomeView({ onSelectPlaylist, onSelectArtist, onSelectAlb
                   onClick={() => playTrack(track, data.top_tracks)}
                   className={`group flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition ${
                     isCurrent
-                      ? 'bg-purple-950/30 border-purple-500/50'
+                      ? 'bg-white/10 border-white/20'
                       : 'bg-audira-card/50 hover:bg-audira-card-hover border-white/5 hover:border-white/10'
                   }`}
                 >

@@ -51,13 +51,13 @@ export default function LikedSongsView({ onBack }) {
         <div className="py-2">
           <button
             onClick={() => playTrack(tracks[0], tracks)}
-            className="w-14 h-14 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent hover:scale-105 active:scale-95 transition"
+            className="w-14 h-14 rounded-full bg-audira-accent text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"
             title={isLikedPlaying ? 'Pause' : 'Play Liked Songs'}
           >
             {isLikedPlaying ? (
-              <Pause size={24} className="fill-white" />
+              <Pause size={24} className="fill-black text-black" />
             ) : (
-              <Play size={24} className="fill-white ml-1" />
+              <Play size={24} className="fill-black text-black ml-1" />
             )}
           </button>
         </div>
@@ -90,7 +90,7 @@ export default function LikedSongsView({ onBack }) {
                   <tr
                     key={track.id}
                     onClick={() => playTrack(track, tracks)}
-                    className={`group hover:bg-audira-card/60 transition cursor-pointer ${isCurrent ? 'bg-purple-950/20' : ''}`}
+                    className={`group hover:bg-white/5 transition cursor-pointer ${isCurrent ? 'bg-white/10' : ''}`}
                   >
                     <td className="py-3 px-3 text-center text-slate-400 font-bold">
                       <span className="group-hover:hidden flex items-center justify-center">
@@ -106,7 +106,7 @@ export default function LikedSongsView({ onBack }) {
                       <div className="flex items-center gap-3">
                         <img src={track.cover_url} alt={track.title} className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm" />
                         <div>
-                          <p className={`font-bold truncate ${isCurrent ? 'text-purple-400' : 'text-white'}`}>{track.title}</p>
+                          <p className={`font-bold truncate ${isCurrent ? 'text-[#1DB954]' : 'text-white'}`}>{track.title}</p>
                           <p className="text-[11px] text-slate-400 truncate">{track.artist_name}</p>
                         </div>
                       </div>
@@ -117,7 +117,7 @@ export default function LikedSongsView({ onBack }) {
                         onClick={(e) => { e.stopPropagation(); toggleLike(track.id); }}
                         className="p-1 mr-3 hover:text-white transition"
                       >
-                        <Heart size={14} className={isLiked(track.id) ? 'fill-purple-500 text-purple-500' : ''} />
+                        <Heart size={14} className={isLiked(track.id) ? 'fill-[#1DB954] text-[#1DB954]' : ''} />
                       </button>
                       {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
                     </td>

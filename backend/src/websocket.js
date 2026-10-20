@@ -36,8 +36,9 @@ function initWebSocketServer(server) {
           if (!token) return;
 
           try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'audira-super-secret-jwt-key-2024');
-            authUserId = decoded.id;
+            const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_audira_music_2026_change_in_prod';
+            const decoded = jwt.verify(token, secret);
+            authUserId = decoded.userId || decoded.id;
 
             // Fetch user profile info
             const res = await pool.query(

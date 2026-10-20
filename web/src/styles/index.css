@@ -155,9 +155,15 @@ body {
 
 /* Discord-Style Profile Badges & Cards */
 .discord-card {
-  background: #10111B;
-  border: 1px solid #1C1F30;
-  border-radius: 12px;
+  background: #1e1f22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.discord-inner-card {
+  background: #111214;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .discord-badge {
@@ -185,10 +191,10 @@ body {
   animation: shimmer 1.8s infinite linear;
 }
 
-/* Audio Player Range Sliders */
+/* Audio Player Range Sliders (1:1 Spotify Signature Scrubber) */
 input[type="range"] {
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 9999px;
   height: 4px;
   outline: none;
@@ -196,7 +202,7 @@ input[type="range"] {
   transition: background 0.15s ease;
 }
 input[type="range"]:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.35);
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -204,13 +210,14 @@ input[type="range"]::-webkit-slider-thumb {
   height: 12px;
   border-radius: 50%;
   background: #FFFFFF;
+  opacity: 0;
   cursor: pointer;
-  box-shadow: 0 0 10px var(--audira-accent-glow);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 input[type="range"]:hover::-webkit-slider-thumb {
-  transform: scale(1.3);
-  background: var(--audira-accent);
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Electron Frameless Window Drag Regions */

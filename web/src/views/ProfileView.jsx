@@ -154,162 +154,163 @@ export default function ProfileView({ username, onSelectPlaylist }) {
   const effectiveAccent = profile.accent_color || '#8B5CF6';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in duration-300">
-      {/* Discord-Inspired Profile Card Container */}
-      <div className="discord-card overflow-hidden shadow-2xl relative">
-        {/* Banner Area (8:3 Ratio) */}
+    <div className="max-w-2xl mx-auto space-y-5 pb-20 animate-in fade-in duration-200">
+      {/* 1:1 Discord Profile Card Container */}
+      <div className="discord-card overflow-hidden shadow-2xl relative border border-white/10">
+        {/* Discord Banner Area (8:3 Ratio) */}
         <div
-          className="w-full aspect-[8/3] max-h-64 bg-cover bg-center relative transition-all duration-300"
+          className="w-full aspect-[8/3] max-h-56 bg-cover bg-center relative transition-all duration-300"
           style={{
             backgroundColor: effectiveAccent,
             backgroundImage: profile.banner_url ? `url(${profile.banner_url})` : undefined
           }}
         >
-          {/* Subtle gradient vignette over banner */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#10111B]/80 via-transparent to-transparent pointer-events-none" />
-
           {isOwnProfile && !isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="absolute top-4 right-4 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-xs font-bold text-white border border-white/20 transition shadow-lg hover:scale-105 active:scale-95"
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-xs font-bold text-white border border-white/20 transition shadow-lg hover:scale-105 active:scale-95"
             >
-              <Edit3 size={14} />
+              <Edit3 size={13} />
               <span>Edit Profile</span>
             </button>
           )}
         </div>
 
-        {/* Profile Card Header with Discord Squircle & Badges */}
-        <div className="px-6 sm:px-8 pb-8 pt-0 relative flex flex-col md:flex-row md:items-end justify-between gap-6 -mt-16 sm:-mt-20">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
-            {/* Avatar with Discord Accent Border + Online Presence Indicator */}
-            <div className="relative shrink-0">
-              <div
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden p-[3px] bg-[#10111B] shadow-2xl transition-transform hover:scale-105"
-                style={{ border: `3.5px solid ${effectiveAccent}` }}
-              >
-                <img
-                  src={profile.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'audira'}`}
-                  alt={profile.display_name}
-                  className="w-full h-full object-cover rounded-full"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'audira'}`;
-                  }}
-                />
-              </div>
-              {/* Real-time Presence status dot (Online / Idle / Offline) */}
-              <div
-                title={presence.status === 'online' ? 'Online on Linear' : presence.status === 'idle' ? 'Idle' : 'Offline'}
-                className={`absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 w-6 h-6 rounded-full border-4 border-[#10111B] shadow-md flex items-center justify-center transition-colors ${
-                  presence.status === 'online' ? 'bg-emerald-500' : presence.status === 'idle' ? 'bg-amber-400' : 'bg-slate-500'
-                }`}
+        {/* Discord Profile Avatar & Details Area */}
+        <div className="px-6 pb-6 pt-0 relative">
+          {/* Avatar with Discord Accent Border + Online Presence Indicator */}
+          <div className="relative -mt-14 sm:-mt-16 mb-3 inline-block">
+            <div
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden p-[2px] bg-[#1e1f22] shadow-2xl transition-transform hover:scale-105"
+              style={{ border: `4px solid ${effectiveAccent}` }}
+            >
+              <img
+                src={profile.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'linear'}`}
+                alt={profile.display_name}
+                className="w-full h-full object-cover rounded-full"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username || 'linear'}`;
+                }}
               />
             </div>
+            {/* Discord Presence Status Dot */}
+            <div
+              title={presence.status === 'online' ? 'Online' : presence.status === 'idle' ? 'Idle' : 'Offline'}
+              className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-[#1e1f22] shadow-md flex items-center justify-center transition-colors ${
+                presence.status === 'online' ? 'bg-[#23a55a]' : presence.status === 'idle' ? 'bg-[#f0b232]' : 'bg-[#80848e]'
+              }`}
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center gap-2">
                 <h1
-                  className="text-2xl sm:text-3xl font-black text-white transition-all"
+                  className="text-2xl font-black text-white tracking-tight"
                   style={{ fontFamily: profile.display_name_font || 'Plus Jakarta Sans' }}
                 >
-                  {profile.display_name}
+                  {profile.display_name || profile.username}
                 </h1>
                 {profile.is_verified && (
                   <span title="Verified Listener">
-                    <ShieldCheck size={22} className="text-cyan-400 fill-cyan-400/20" />
+                    <ShieldCheck size={20} className="text-[#1DB954] fill-[#1DB954]/20" />
                   </span>
                 )}
               </div>
-              <p className="text-xs font-semibold text-slate-400">@{profile.username}</p>
+              <p className="text-xs text-slate-400 font-medium">@{profile.username}</p>
+            </div>
 
-              {/* Real-time "Listening to X" Card */}
-              {presence.currentTrack && (
-                <div className="pt-1">
-                  <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md shadow-md max-w-full">
-                    <img
-                      src={presence.currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100'}
-                      alt=""
-                      className="w-8 h-8 rounded-lg object-cover shadow shrink-0"
-                    />
-                    <div className="text-left min-w-0 pr-1">
-                      <div className="flex items-center gap-1.5 text-[9px] uppercase font-bold text-audira-accent tracking-wider">
-                        <EqualizerWave className="h-2.5" />
-                        <span>Listening to</span>
+            {/* Badges Row with Discord Glass Tooltips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {(profile.badges && profile.badges.length > 0 ? profile.badges : [
+                { badge_key: 'early_adopter', badge_name: 'Early Adopter', description: 'Joined Linear during platform launch.', icon: 'Sparkles' },
+                { badge_key: 'old_listener', badge_name: 'Old Listener', description: 'Active community member with listening history.', icon: 'Headphones' }
+              ]).map((badge) => {
+                const meta = BADGE_ICONS[badge.badge_key] || {
+                  icon: Award,
+                  color: 'text-[#1DB954]',
+                  bg: 'bg-[#1DB954]/10 border-[#1DB954]/30'
+                };
+                const IconComp = meta.icon;
+
+                return (
+                  <div key={badge.badge_key} className="relative group">
+                    <div
+                      className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 cursor-pointer shadow-sm hover:scale-110 ${meta.bg}`}
+                      tabIndex={0}
+                      aria-label={badge.badge_name}
+                    >
+                      <IconComp size={15} className={meta.color} />
+                    </div>
+
+                    {/* Discord Glass Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none transition-all duration-150">
+                      <div className="bg-[#111214]/95 backdrop-blur-md border border-white/10 px-3 py-2 rounded-xl shadow-2xl text-center min-w-[150px] max-w-[220px]">
+                        <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                          <IconComp size={13} className={meta.color} />
+                          <span className="text-white text-xs font-black">{badge.badge_name}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-300 leading-snug">
+                          {badge.description}
+                        </p>
                       </div>
-                      <p className="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-[280px]">
-                        {presence.currentTrack.title}
-                      </p>
-                      <p className="text-[10px] text-slate-400 truncate max-w-[180px]">
-                        {presence.currentTrack.artist}
-                      </p>
+                      <div className="w-2 h-2 bg-[#111214] border-r border-b border-white/10 rotate-45 -mt-1" />
                     </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Discord Activity Block (1:1 "LISTENING TO SPOTIFY") */}
+            {presence.currentTrack && (
+              <div className="discord-inner-card p-4 space-y-3 mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#23a55a] flex items-center gap-1.5">
+                    <EqualizerWave className="h-3" />
+                    <span>Listening to Linear</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Live</span>
                 </div>
-              )}
 
-              {/* Badges Row (replaces tags with interactive icon badges & tooltips) */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1.5">
-                {(profile.badges && profile.badges.length > 0 ? profile.badges : [
-                  { badge_key: 'early_adopter', badge_name: 'Early Adopter', description: 'Joined Audira during platform launch.', icon: 'Sparkles' },
-                  { badge_key: 'old_listener', badge_name: 'Old Listener', description: 'Active community member with listening history.', icon: 'Headphones' }
-                ]).map((badge) => {
-                  const meta = BADGE_ICONS[badge.badge_key] || {
-                    icon: Award,
-                    color: 'text-purple-400',
-                    bg: 'bg-purple-400/10 border-purple-400/30'
-                  };
-                  const IconComp = meta.icon;
-
-                  return (
-                    <div key={badge.badge_key} className="relative group">
-                      <div
-                        className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all duration-200 cursor-pointer shadow-sm hover:scale-115 hover:shadow-lg ${meta.bg}`}
-                        tabIndex={0}
-                        aria-label={badge.badge_name}
-                      >
-                        <IconComp size={15} className={meta.color} />
-                      </div>
-
-                      {/* Discord/Steam Style Glass Tooltip on Hover */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none transition-all duration-150">
-                        <div className="bg-[#121320]/95 backdrop-blur-md border border-white/15 px-3 py-2 rounded-xl shadow-2xl text-center min-w-[150px] max-w-[220px]">
-                          <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                            <IconComp size={13} className={meta.color} />
-                            <span className="text-white text-xs font-black">{badge.badge_name}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-300 leading-snug">
-                            {badge.description}
-                          </p>
-                          <div className="mt-1 pt-1 border-t border-white/10 text-[9px] text-slate-500 font-semibold uppercase tracking-wider">
-                            Activity Badge
-                          </div>
-                        </div>
-                        {/* Tooltip caret */}
-                        <div className="w-2 h-2 bg-[#121320] border-r border-b border-white/15 rotate-45 -mt-1" />
-                      </div>
-                    </div>
-                  );
-                })}
-
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pl-2">
-                  <Calendar size={13} />
-                  <span>Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                <div className="flex items-center gap-3.5">
+                  <img
+                    src={presence.currentTrack.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300'}
+                    alt=""
+                    className="w-16 h-16 rounded-lg object-cover shadow-md shrink-0 border border-white/5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate hover:underline cursor-pointer">
+                      {presence.currentTrack.title}
+                    </p>
+                    <p className="text-xs text-[#dbdee1] truncate mt-0.5">
+                      by {presence.currentTrack.artist}
+                    </p>
+                    {presence.currentTrack.album && (
+                      <p className="text-[11px] text-[#949ba4] truncate mt-0.5">
+                        on {presence.currentTrack.album}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* Discord "ABOUT ME" Box */}
+            {profile.bio && (
+              <div className="discord-inner-card p-4 mt-3">
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">About Me</p>
+                <p className="text-xs text-[#dbdee1] leading-relaxed whitespace-pre-line">{profile.bio}</p>
+              </div>
+            )}
+
+            {/* Discord Member Since Box */}
+            <div className="discord-inner-card p-3.5 flex items-center gap-2.5 text-xs text-slate-300 mt-3">
+              <Calendar size={15} className="text-slate-400" />
+              <span>Linear member since <b>{new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</b></span>
             </div>
           </div>
         </div>
-
-        {/* Bio Card Section */}
-        {profile.bio && (
-          <div className="px-6 sm:px-8 pb-6 pt-3 border-t border-white/5 text-xs text-slate-300 leading-relaxed max-w-2xl">
-            <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1.5">About Me</p>
-            <div className="p-3.5 rounded-xl bg-audira-card/60 border border-white/5 whitespace-pre-line">
-              {profile.bio}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Edit Profile Modal */}

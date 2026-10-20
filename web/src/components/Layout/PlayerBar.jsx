@@ -153,9 +153,6 @@ export default function PlayerBar() {
             className="shrink-0"
           />
         </div>
-            className="shrink-0"
-          />
-        </div>
 
         {/* Center: Playback Controls & Scrubber */}
         <div className="flex flex-col items-center flex-1 max-w-xl">

@@ -116,21 +116,21 @@ export default function SearchView({ onSelectPlaylist, onSelectArtist }) {
                     className="w-24 h-24 rounded-2xl object-cover shadow-xl mb-4 border border-white/10"
                   />
                   <h3 className="text-xl font-black text-white truncate">{results.tracks[0].title}</h3>
-                  <p className="text-sm text-purple-300 font-semibold mt-0.5">{results.tracks[0].artist_name}</p>
+                  <p className="text-sm text-slate-300 font-semibold mt-0.5 hover:underline cursor-pointer">{results.tracks[0].artist_name}</p>
                 </div>
 
                 <div className="mt-6 flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-900/40 text-purple-300 border border-purple-500/30">
-                    Track
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-black/60 text-white">
+                    Song
                   </span>
                   <button
                     onClick={() => playTrack(results.tracks[0], results.tracks)}
-                    className="w-12 h-12 rounded-full bg-audira-accent text-white flex items-center justify-center shadow-glow-accent hover:scale-105 active:scale-95 transition"
+                    className="w-12 h-12 rounded-full bg-[#1DB954] text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"
                   >
                     {currentTrack?.id === results.tracks[0].id && isPlaying ? (
-                      <Pause size={20} className="fill-white" />
+                      <Pause size={20} className="fill-black text-black" />
                     ) : (
-                      <Play size={20} className="fill-white ml-0.5" />
+                      <Play size={20} className="fill-black text-black ml-0.5" />
                     )}
                   </button>
                 </div>
@@ -147,8 +147,8 @@ export default function SearchView({ onSelectPlaylist, onSelectArtist }) {
                     <div
                       key={track.id}
                       onClick={() => playTrack(track, results.tracks)}
-                      className={`group flex items-center justify-between p-2.5 rounded-xl hover:bg-audira-card transition cursor-pointer border ${
-                        isCurrent ? 'bg-purple-950/20 border-purple-500/40' : 'border-transparent'
+                      className={`group flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer ${
+                        isCurrent ? 'bg-white/10' : 'hover:bg-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden min-w-0">

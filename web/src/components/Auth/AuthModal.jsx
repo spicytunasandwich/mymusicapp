@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Lock, User, AtSign, ArrowRight, Sparkles, KeyRound, Clock, AlertCircle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, User, AtSign, ArrowRight, Sparkles, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AuthModal() {
@@ -10,13 +10,11 @@ export default function AuthModal() {
     login,
     signup,
     googleLogin,
-    verifyCode,
-    resendCode,
     forgotPassword,
     resetPassword
   } = useAuth();
 
-  // Mode: 'login' | 'signup' | 'verify' | 'forgot' | 'reset'
+  // Mode: 'login' | 'signup' | 'forgot'
   const [mode, setMode] = useState(authModalTab || 'login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,14 +23,9 @@ export default function AuthModal() {
   // Form states
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-
-  // Resend cooldown timer
-  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (authModalTab) {
@@ -41,14 +34,6 @@ export default function AuthModal() {
       setSuccess('');
     }
   }, [authModalTab]);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const interval = setInterval(() => {
-      setCooldown(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [cooldown]);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -96,9 +81,9 @@ export default function AuthModal() {
           const btn = document.getElementById('google-signin-btn');
           if (btn) {
             window.google.accounts.id.renderButton(btn, {
-              theme: 'outline',
+              theme: 'filled_black',
               size: 'large',
-              width: 384,
+              width: 320,
               text: 'continue_with',
               shape: 'pill'
             });
@@ -126,22 +111,10 @@ export default function AuthModal() {
     setLoading(true);
 
     try {
-      const data = await login(identifier, password);
-      if (data?.requires_verification) {
-        setEmail(data.email);
-        setCooldown(data.cooldown || 60);
-        setMode('verify');
-        setSuccess('Please enter the 6-digit code sent to your email.');
-      }
+      await login(identifier, password);
+      closeAuth();
     } catch (err) {
-      if (err.data?.requires_verification) {
-        setEmail(err.data.email || identifier);
-        setCooldown(err.data.cooldown || 60);
-        setMode('verify');
-        setError(err.message || 'Your email is not verified yet. We sent a 6-digit code.');
-      } else {
-        setError(err.message || 'Invalid email or password.');
-      }
+      setError(err.message || 'Invalid email/username or password.');
     } finally {
       setLoading(false);
     }
@@ -168,7 +141,7 @@ export default function AuthModal() {
         email,
         password,
         username: cleanUser,
-        display_name: displayName
+        display_name: displayName || cleanUser
       });
       closeAuth();
     } catch (err) {
@@ -178,89 +151,20 @@ export default function AuthModal() {
     }
   };
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    resetMessages();
-    if (!otpCode || otpCode.trim().length !== 6) {
-      setError('Please enter the full 6-digit code.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await verifyCode(email, otpCode.trim());
-    } catch (err) {
-      setError(err.message || 'Verification failed. Please check the code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async (type = 'verification') => {
-    if (cooldown > 0) return;
-    resetMessages();
-    setLoading(true);
-
-    try {
-      const data = await resendCode(email, type);
-      setCooldown(data.cooldown || 60);
-      setSuccess(data.message || 'A new 6-digit code has been sent to your email.');
-    } catch (err) {
-      setError(err.message || 'Failed to resend code. Please try again later.');
-      if (err.data?.cooldown) {
-        setCooldown(err.data.cooldown);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     resetMessages();
     if (!email) {
-      setError('Please enter your email address.');
+      setError('Please provide your account email address.');
       return;
     }
 
     setLoading(true);
     try {
       const data = await forgotPassword(email);
-      setCooldown(data.cooldown || 60);
-      setMode('reset');
-      setSuccess('If an account exists, a 6-digit reset code was sent to your email.');
+      setSuccess(data.message || 'Password reset instructions have been sent.');
     } catch (err) {
-      setError(err.message || 'Failed to send reset code.');
-      if (err.data?.cooldown) {
-        setCooldown(err.data.cooldown);
-        setMode('reset');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    resetMessages();
-    if (!otpCode || otpCode.trim().length !== 6) {
-      setError('Please enter the full 6-digit code.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const data = await resetPassword(email, otpCode.trim(), newPassword);
-      setSuccess(data.message || 'Password reset successfully! Please log in.');
-      setMode('login');
-      setPassword('');
-      setOtpCode('');
-    } catch (err) {
-      setError(err.message || 'Password reset failed.');
+      setError(err.message || 'Failed to request password reset.');
     } finally {
       setLoading(false);
     }
@@ -274,32 +178,29 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#11121C] border border-[#23263B] rounded-2xl shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#121212] border border-[#282828] rounded-2xl shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           onClick={closeAuth}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+          className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
 
-        {/* Modal Header */}
-        <div className="p-8 pb-3 text-center">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] mb-3 shadow-lg shadow-purple-900/30">
-            <div className="w-full h-full bg-[#0D0E15] rounded-[14px] flex items-center justify-center">
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-purple-400 to-cyan-300 text-2xl">A</span>
-            </div>
+        {/* Modal Header (1:1 Spotify Layout) */}
+        <div className="px-8 pt-8 pb-4 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 border border-white/10 mb-4 shadow-lg">
+            <img src="/brand/logo.svg" alt="Linear" className="w-7 h-7 object-contain" />
           </div>
-          <h2 className="text-xl font-black tracking-wide text-white">
-            {mode === 'login' && 'Welcome Back to Audira'}
-            {mode === 'signup' && 'Join Audira Music'}
-            {mode === 'verify' && 'Verify Your Email'}
-            {mode === 'forgot' && 'Reset Password'}
-            {mode === 'reset' && 'Create New Password'}
+
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            {mode === 'login' && 'Log in to Linear'}
+            {mode === 'signup' && 'Sign up to start listening'}
+            {mode === 'forgot' && 'Reset your password'}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            {mode === 'verify' ? `Enter the 6-digit code sent to ${email || 'your email'}` : 'Unlimited free music streaming. No subscriptions.'}
+          <p className="text-xs text-slate-400 mt-1.5">
+            Unlimited free music streaming. No subscriptions.
           </p>
 
           {/* Quick Demo Fill Shortcut (only in login) */}
@@ -307,158 +208,142 @@ export default function AuthModal() {
             <button
               type="button"
               onClick={fillDemo}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-purple-900/30 text-purple-300 border border-purple-500/30 hover:bg-purple-900/50 transition"
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition"
             >
-              <Sparkles size={13} />
+              <Sparkles size={13} className="text-[#1DB954]" />
               Fill Demo credentials (demo@audira.io)
             </button>
           )}
         </div>
 
-        {/* Tabs for Login / Signup */}
-        {(mode === 'login' || mode === 'signup') && (
-          <div className="flex border-b border-[#23263B] px-8">
-            <button
-              onClick={() => { setMode('login'); resetMessages(); }}
-              className={`flex-1 py-3 text-xs font-bold transition border-b-2 ${
-                mode === 'login'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => { setMode('signup'); resetMessages(); }}
-              className={`flex-1 py-3 text-xs font-bold transition border-b-2 ${
-                mode === 'signup'
-                  ? 'border-cyan-400 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-        )}
-
-        <div className="p-8 pt-5 space-y-4">
-          {/* Notifications */}
+        {/* Notifications */}
+        <div className="px-8">
           {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium flex items-start gap-2 mb-3">
               <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-400" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-start gap-2 mb-3">
               <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-400" />
               <span>{success}</span>
             </div>
           )}
+        </div>
 
+        <div className="px-8 pb-8 space-y-4">
           {/* Google Sign-in Section (Login & Signup modes) */}
           {(mode === 'login' || mode === 'signup') && (
-            <div className="space-y-3">
-              <div id="google-signin-btn" className="flex justify-center min-h-[44px]">
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => {
-                    if (!googleClientId) {
-                      setError('Google Sign-In is not configured yet. Set VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_ID.');
-                      return;
-                    }
-                    if (window.google?.accounts?.id) {
-                      window.google.accounts.id.prompt();
-                    } else {
-                      setError('Loading Google services. Please try again.');
-                    }
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-[#2D314D] bg-[#0E101A] hover:bg-[#181B2C] text-xs font-semibold text-slate-200 flex items-center justify-center gap-3 transition shadow-sm"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
+            <>
+              <div className="flex justify-center">
+                <div id="google-signin-btn" className="flex justify-center min-h-[44px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!googleClientId) {
+                        setError('Google Sign-In is not configured yet. Set VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_ID.');
+                        return;
+                      }
+                      if (window.google?.accounts?.id) {
+                        window.google.accounts.id.prompt();
+                      } else {
+                        setError('Loading Google services. Please try again.');
+                      }
+                    }}
+                    className="w-full max-w-[320px] py-2.5 px-4 rounded-full border border-[#727272] hover:border-white text-xs font-bold text-white flex items-center justify-center gap-3 transition hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                    <span>Continue with Google</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="relative flex items-center justify-center my-2">
-                <div className="border-t border-[#23263B] w-full" />
-                <span className="bg-[#11121C] px-3 text-[10px] uppercase tracking-wider text-slate-500 font-bold shrink-0">
-                  or continue with email
-                </span>
-                <div className="border-t border-[#23263B] w-full" />
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-[#282828]" />
+                <span className="flex-shrink mx-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">or</span>
+                <div className="flex-grow border-t border-[#282828]" />
               </div>
-            </div>
+            </>
           )}
 
           {/* 1. LOGIN FORM */}
           {mode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email or Username</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    disabled={loading}
-                    placeholder="demo@audira.io or audiophile"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <label className="text-xs font-bold text-white block mb-1.5">
+                  Email or username
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  disabled={loading}
+                  placeholder="Email or username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-white block">
+                    Password
+                  </label>
                   <button
                     type="button"
-                    disabled={loading}
                     onClick={() => { setMode('forgot'); resetMessages(); }}
-                    className="text-[11px] text-purple-400 hover:text-purple-300 transition disabled:opacity-50"
+                    className="text-xs text-slate-400 hover:text-white underline transition"
                   >
                     Forgot password?
                   </button>
                 </div>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="password"
-                    required
-                    disabled={loading}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <input
+                  type="password"
+                  required
+                  disabled={loading}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
+              {/* Signature Spotify Green Round CTA Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-full font-bold text-sm bg-[#1DB954] text-black hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 transition disabled:opacity-50 cursor-pointer shadow-lg mt-2"
               >
                 {loading ? (
                   <>
-                    <Loader2 size={15} className="animate-spin text-white" />
-                    <span>Signing in...</span>
+                    <Loader2 size={16} className="animate-spin text-black" />
+                    <span>Logging in...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Log In</span>
-                    <ArrowRight size={15} />
-                  </>
+                  <span>Log In</span>
                 )}
               </button>
+
+              <div className="border-t border-[#282828] pt-4 text-center">
+                <p className="text-xs text-slate-400">
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setMode('signup'); resetMessages(); }}
+                    className="text-white font-bold hover:underline"
+                  >
+                    Sign up for Linear
+                  </button>
+                </p>
+              </div>
             </form>
           )}
 
@@ -466,291 +351,139 @@ export default function AuthModal() {
           {mode === 'signup' && (
             <form onSubmit={handleSignup} className="space-y-3.5">
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Display Name</label>
-                <div className="relative">
-                  <User size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    disabled={loading}
-                    placeholder="e.g. Alex Rivers"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <label className="text-xs font-bold text-white block mb-1">
+                  What's your email?
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  disabled={loading}
+                  placeholder="name@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Username Handle (min 3 chars)</label>
-                <div className="relative">
-                  <AtSign size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    minLength={3}
-                    disabled={loading}
-                    placeholder="e.g. linear_sound"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <label className="text-xs font-bold text-white block mb-1">
+                  Create a username (min 3 chars)
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={30}
+                  disabled={loading}
+                  placeholder="cool_listener"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Address</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="email"
-                    required
-                    disabled={loading}
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <label className="text-xs font-bold text-white block mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  disabled={loading}
+                  placeholder="What should we call you?"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password (min 8 chars)</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    disabled={loading}
-                    placeholder="Min 8 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <label className="text-xs font-bold text-white block mb-1">
+                  Create a password (min 8 chars)
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  disabled={loading}
+                  placeholder="At least 8 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-full font-bold text-sm bg-[#1DB954] text-black hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 transition disabled:opacity-50 cursor-pointer shadow-lg mt-3"
               >
                 {loading ? (
                   <>
-                    <Loader2 size={15} className="animate-spin text-white" />
+                    <Loader2 size={16} className="animate-spin text-black" />
                     <span>Creating account...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Create Account & Start Listening</span>
-                    <ArrowRight size={15} />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* 3. 6-DIGIT EMAIL VERIFICATION FORM */}
-          {mode === 'verify' && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-xs text-purple-200 flex items-center gap-2">
-                <Clock size={16} className="text-purple-400 shrink-0" />
-                <span>Code expires in <b>10 minutes</b> (max 5 attempts).</span>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 text-center">
-                  6-Digit Verification Code
-                </label>
-                <div className="relative">
-                  <KeyRound size={16} className="absolute left-3.5 top-3.5 text-slate-500" />
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    autoFocus
-                    disabled={loading}
-                    placeholder="123456"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-10 pr-4 py-3 text-center text-lg font-mono font-bold tracking-[8px] text-cyan-300 placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otpCode.length !== 6}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin text-white" />
-                    <span>Verifying code...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Verify & Enter Audira</span>
-                    <ArrowRight size={15} />
-                  </>
+                  <span>Sign Up</span>
                 )}
               </button>
 
-              <div className="flex items-center justify-between pt-2 text-xs">
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
-                >
-                  ← Back to Log In
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleResend('verification')}
-                  disabled={cooldown > 0 || loading}
-                  className="text-purple-400 hover:text-purple-300 font-semibold transition disabled:text-slate-600 flex items-center gap-1"
-                >
-                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
-                </button>
+              <div className="border-t border-[#282828] pt-4 text-center">
+                <p className="text-xs text-slate-400">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setMode('login'); resetMessages(); }}
+                    className="text-white font-bold hover:underline"
+                  >
+                    Log in here
+                  </button>
+                </p>
               </div>
             </form>
           )}
 
-          {/* 4. FORGOT PASSWORD FORM */}
+          {/* 3. FORGOT PASSWORD FORM */}
           {mode === 'forgot' && (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Your Account Email
+                <label className="text-xs font-bold text-white block mb-1.5">
+                  Enter your email address
                 </label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="email"
-                    required
-                    disabled={loading}
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  disabled={loading}
+                  placeholder="name@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#727272] hover:border-white focus:border-[#1DB954] rounded-md px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50"
+                />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-full font-bold text-sm bg-[#1DB954] text-black hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 transition disabled:opacity-50 cursor-pointer shadow-lg"
               >
                 {loading ? (
                   <>
-                    <Loader2 size={15} className="animate-spin text-white" />
-                    <span>Sending code...</span>
+                    <Loader2 size={16} className="animate-spin text-black" />
+                    <span>Sending instructions...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Send 6-Digit Reset Code</span>
-                    <ArrowRight size={15} />
-                  </>
+                  <span>Send Reset Link</span>
                 )}
               </button>
 
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  disabled={loading}
                   onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-xs text-slate-400 hover:text-white transition disabled:opacity-50"
+                  className="text-xs font-semibold text-slate-400 hover:text-white transition"
                 >
                   ← Back to Log In
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* 5. RESET PASSWORD FORM */}
-          {mode === 'reset' && (
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-xs text-purple-200 flex items-center gap-2">
-                <Clock size={16} className="text-purple-400 shrink-0" />
-                <span>Code expires in <b>10 minutes</b> (max 5 attempts).</span>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 text-center">
-                  6-Digit Reset Code
-                </label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  autoFocus
-                  disabled={loading}
-                  placeholder="123456"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[8px] text-purple-300 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  New Password
-                </label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="password"
-                    required
-                    disabled={loading}
-                    placeholder="Min 6 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-[#0B0C14] border border-[#23263B] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 transition disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otpCode.length !== 6 || newPassword.length < 6}
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 hover:opacity-95 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin text-white" />
-                    <span>Resetting password...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Set New Password & Log In</span>
-                    <ArrowRight size={15} />
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-between pt-2 text-xs">
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => { setMode('login'); resetMessages(); }}
-                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
-                >
-                  ← Back to Log In
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleResend('reset')}
-                  disabled={cooldown > 0 || loading}
-                  className="text-purple-400 hover:text-purple-300 font-semibold transition disabled:text-slate-600 flex items-center gap-1"
-                >
-                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
                 </button>
               </div>
             </form>
@@ -760,4 +493,3 @@ export default function AuthModal() {
     </div>
   );
 }
-

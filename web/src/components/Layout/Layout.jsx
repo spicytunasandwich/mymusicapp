@@ -21,11 +21,10 @@ export default function Layout({
 
   return (
     <div
-      className="h-screen w-screen flex flex-col overflow-hidden text-slate-100 select-none transition-colors duration-300"
-      style={{ background: 'var(--audira-bg-gradient)' }}
+      className="h-screen w-screen flex flex-col overflow-hidden text-slate-100 select-none bg-black p-0 md:p-2 gap-2"
     >
-      {/* Upper viewport: Sidebar (left) + Main Content Area (right) - both seamlessly unified */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* Upper viewport: Spotify Dual-Island Sidebar (left) + Main Content Card (right) */}
+      <div className="flex-1 flex gap-2 overflow-hidden min-h-0 relative">
         <Sidebar
           activeView={activeView}
           setActiveView={setActiveView}
@@ -37,14 +36,18 @@ export default function Layout({
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-transparent">
+        {/* Center Main Viewport Card (Spotify 1:1 rounded island with sticky topbar) */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 md:rounded-lg bg-[#121212] relative shadow-2xl">
           <TopBar
+            activeView={activeView}
+            setActiveView={setActiveView}
             onOpenProfile={onOpenProfile}
             onOpenSettings={onOpenSettings}
+            onOpenImport={onOpenImport}
             onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
           />
 
-          <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 relative min-w-0">
+          <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 relative min-w-0 scrollbar-thin">
             {children}
           </main>
         </div>
@@ -54,11 +57,11 @@ export default function Layout({
       <PlayerBar />
 
       {/* Mobile Bottom Navigation Bar (Spotify mobile style) */}
-      <nav className="md:hidden flex items-center justify-around h-14 bg-audira-sidebar/95 backdrop-blur-lg border-t border-white/[0.06] z-20 shrink-0">
+      <nav className="md:hidden flex items-center justify-around h-14 bg-black/95 backdrop-blur-lg border-t border-white/[0.08] z-20 shrink-0">
         <button
           onClick={() => setActiveView('home')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition ${
-            activeView === 'home' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-white'
+            activeView === 'home' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Home size={20} />
@@ -68,7 +71,7 @@ export default function Layout({
         <button
           onClick={() => setActiveView('search')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition ${
-            activeView === 'search' ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-white'
+            activeView === 'search' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Search size={20} />
@@ -78,7 +81,7 @@ export default function Layout({
         <button
           onClick={() => setActiveView('library')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition ${
-            activeView === 'library' ? 'text-pink-400 font-bold' : 'text-slate-400 hover:text-white'
+            activeView === 'library' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Library size={20} />
@@ -94,7 +97,7 @@ export default function Layout({
             }
           }}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition ${
-            activeView === 'profile' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-white'
+            activeView === 'profile' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'
           }`}
         >
           <UserIcon size={20} />

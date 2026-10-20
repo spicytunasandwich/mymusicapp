@@ -23,7 +23,7 @@ function generate6DigitCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-const ACCENT_COLORS = ['#7C3AED', '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#06B6D4', '#8B5CF6'];
+const ACCENT_COLORS = ['#1DB954', '#1ED760', '#3B82F6', '#8B5CF6', '#06B6D4', '#EC4899', '#F59E0B'];
 
 // 1. SIGNUP (Instant Access, Password >= 8, Username >= 3, No Blocking Email Verification)
 exports.signup = async (req, res) => {
@@ -84,10 +84,10 @@ exports.signup = async (req, res) => {
 
     const newUser = userResult.rows[0];
 
-    // Initialize default user settings
+    // Initialize default user settings (1:1 Spotify Green & Dark Palette)
     await pool.query(
       `INSERT INTO user_settings (user_id, theme_accent, theme_mode, gradient_top, gradient_bottom)
-       VALUES ($1, $2, 'dark', '#1A102E', '#08090E') ON CONFLICT (user_id) DO NOTHING`,
+       VALUES ($1, $2, 'dark', '#1A2E22', '#121212') ON CONFLICT (user_id) DO NOTHING`,
       [newUser.id, randomAccent]
     );
 
@@ -99,11 +99,6 @@ exports.signup = async (req, res) => {
       token,
       user: newUser
     });
-  } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Failed to create account.' });
-  }
-};
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Failed to create account.' });
@@ -478,8 +473,9 @@ exports.forgotPassword = async (req, res) => {
     }).catch(err => console.error('Password reset email error:', err));
 
     res.json({
-      message: 'A 6-digit password reset code has been sent to your email.',
+      message: 'Password reset code generated. You can now set a new password.',
       email: user.email,
+      code,
       requires_reset_code: true,
       cooldown: 60
     });
