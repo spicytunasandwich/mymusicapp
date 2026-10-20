@@ -423,6 +423,20 @@ export function PlayerProvider({ children }) {
 
   const toggleLyrics = () => setIsLyricsOpen(o => !o);
 
+  const stopPlayback = () => {
+    try {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    } catch (_) {}
+    if (spotifyPlayerRef.current) {
+      spotifyPlayerRef.current.pause().catch(() => {});
+    }
+    setIsPlaying(false);
+    setCurrentTrack(null);
+    setCurrentTime(0);
+    setCurrentTimeMs(0);
+  };
+
   const toggleLike = async (trackId) => {
     if (!isAuthenticated) {
       openAuth('login');
@@ -472,6 +486,7 @@ export function PlayerProvider({ children }) {
         toggleShuffle,
         cycleRepeat,
         toggleLyrics,
+        stopPlayback,
         toggleLike,
         isLiked,
         setQueue

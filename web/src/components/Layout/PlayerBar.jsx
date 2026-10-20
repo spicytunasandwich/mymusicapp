@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1,
-  Volume2, Volume1, VolumeX, Heart, Mic2, Sparkles, Disc
+  Volume2, Volume1, VolumeX, Heart, Mic2, Sparkles, Disc, X
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useAuth } from '../../context/AuthContext';
@@ -39,28 +39,32 @@ export default function PlayerBar() {
     toggleShuffle,
     cycleRepeat,
     toggleLyrics,
+    stopPlayback,
     toggleLike,
     isLiked
   } = usePlayer();
   const { user } = useAuth();
 
-  if (!currentTrack) {
-    return (
-      <footer className="h-16 md:h-20 bg-black/75 backdrop-blur-2xl border-t border-white/10 flex items-center justify-between px-4 md:px-6 select-none z-30 shrink-0">
-        <div className="text-xs text-slate-500 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-slate-600 animate-pulse" />
-          <span>No track selected. Choose any track to begin listening.</span>
-        </div>
-      </footer>
-    );
-  }
-
-  const liked = isLiked(currentTrack.id);
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const liked = currentTrack ? isLiked(currentTrack.id) : false;
+  const progressPercent = currentTrack && duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <footer className="relative bg-black/80 backdrop-blur-2xl border-t border-white/10 select-none z-30 shrink-0">
-      {/* Spotify Notice Banner */}
+    <AnimatePresence>
+      {currentTrack && (
+        <motion.footer
+          key="spotify-player-bar"
+          initial={{ y: '100%', opacity: 0, height: 0 }}
+          animate={{ y: 0, opacity: 1, height: 'auto' }}
+          exit={{ y: '100%', opacity: 0, height: 0 }}
+          transition={{
+            type: 'spring',
+            stiffness: 380,
+            damping: 32,
+            mass: 0.8
+          }}
+          className="relative bg-black/85 md:bg-[#121212] backdrop-blur-2xl border-t border-white/10 select-none z-30 shrink-0 overflow-hidden md:rounded-lg shadow-2xl will-animate"
+        >
+          {/* Spotify Notice Banner */}
       {spotifyNotice && (
         <div className="bg-emerald-950/90 border-b border-emerald-500/30 text-emerald-200 px-4 py-1.5 text-xs flex items-center justify-between backdrop-blur-md">
           <div className="flex items-center gap-2 truncate">
@@ -291,8 +295,18 @@ export default function PlayerBar() {
               </div>
             </div>
           )}
+          {/* Stop / Close Player Button */}
+          <button
+            onClick={stopPlayback}
+            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition ml-1"
+            title="Close player"
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
-    </footer>
-  );
+    </motion.footer>
+  )}
+</AnimatePresence>
+);
 }
