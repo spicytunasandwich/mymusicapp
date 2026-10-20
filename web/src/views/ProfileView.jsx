@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   User, Calendar, Edit3, Music2, Camera, Check, X,
   ShieldCheck, Sparkles, Award, Headphones, Moon, Heart
@@ -265,7 +266,7 @@ export default function ProfileView({ username, onSelectPlaylist }) {
           </div>
 
           <div className="space-y-3">
-            <div>
+            <div className="scroll-mt-24">
               <div className="flex items-center gap-2">
                 <h1
                   className="text-2xl font-black text-white tracking-tight"
@@ -374,13 +375,19 @@ export default function ProfileView({ username, onSelectPlaylist }) {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
-      {isEditing && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-audira-card border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animation-scale-up max-h-[90vh] flex flex-col">
+      {/* Edit Profile Modal (Portalled to document.body so TopBar never overlaps or obscures it) */}
+      {isEditing && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEditing(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="w-full max-w-lg bg-[#181818] border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animation-scale-up max-h-[90vh] flex flex-col my-auto relative z-10">
             <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
               <h3 className="font-black text-white text-base">Edit Public Profile</h3>
               <button
+                type="button"
                 onClick={() => setIsEditing(false)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"
               >
@@ -389,14 +396,15 @@ export default function ProfileView({ username, onSelectPlaylist }) {
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4 pt-4 text-xs overflow-y-auto pr-1 flex-1">
-              <div>
-                <label className="font-bold text-slate-400 block mb-1">Display Name</label>
+              <div className="scroll-mt-6">
+                <label className="font-bold text-slate-300 block mb-1">Display Name</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-[#0D0E15] border border-audira-border rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-purple-500 font-bold"
+                  className="w-full bg-[#121212] border border-white/15 focus:border-[#1DB954] rounded-xl px-3.5 py-2.5 text-white focus:outline-none font-bold text-sm transition relative z-10"
                   style={{ fontFamily: displayNameFont }}
+                  autoFocus
                 />
               </div>
 
@@ -504,14 +512,15 @@ export default function ProfileView({ username, onSelectPlaylist }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 rounded-xl bg-audira-accent hover:opacity-90 text-white font-bold shadow-glow-accent transition"
+                  className="px-6 py-2 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold shadow-lg transition active:scale-95"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Image Crop & Retina Preview Modal with Error Boundary */}

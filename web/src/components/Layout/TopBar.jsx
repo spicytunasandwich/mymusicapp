@@ -31,7 +31,7 @@ export default function TopBar({
   }, []);
 
   return (
-    <header className="h-16 px-4 md:px-6 flex items-center justify-between bg-[#121212]/90 backdrop-blur-md sticky top-0 z-30 select-none app-drag transition-colors">
+    <header className="h-16 px-4 md:px-6 flex items-center justify-between bg-[#121212]/90 backdrop-blur-md sticky top-0 z-20 select-none app-drag transition-colors">
       {/* Left controls: Mobile Menu + History Navigation */}
       <div className="flex items-center gap-3 no-drag">
         {/* Mobile Hamburger Menu */}
