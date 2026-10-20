@@ -298,13 +298,22 @@ export default function ColorPicker({
 
         {/* Draggable Ball Cursor */}
         <div
-          className="absolute w-5 h-5 -ml-2.5 -mt-2.5 rounded-full border-2 border-white shadow-[0_0_6px_rgba(0,0,0,0.8)] pointer-events-none transition-transform active:scale-125"
+          className="absolute w-5 h-5 -ml-2.5 -mt-2.5 rounded-full border-2 border-white shadow-[0_0_6px_rgba(0,0,0,0.8)] pointer-events-none transition-transform active:scale-125 flex items-center justify-center"
           style={{
             left: `${ballLeft}%`,
             top: `${ballTop}%`,
             backgroundColor: currentHex
           }}
-        />
+        >
+          {/* Floating live hex preview badge */}
+          <div
+            className={`absolute px-1.5 py-0.5 rounded bg-black/90 border border-white/30 text-[9px] font-mono font-bold text-white whitespace-nowrap shadow-lg pointer-events-none ${
+              ballTop < 20 ? 'top-6' : '-top-6'
+            }`}
+          >
+            {currentHex}
+          </div>
+        </div>
       </div>
 
       {/* Hue Slider Bar */}
@@ -358,26 +367,54 @@ export default function ColorPicker({
         </div>
       )}
 
-      {/* Hex Input and Validation */}
-      <div className="flex items-center gap-2 pt-1">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={hexInput}
-            maxLength={7}
-            onChange={handleHexInputChange}
-            placeholder="#RRGGBB"
-            className="w-full bg-[#090A10] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-purple-400 transition"
-          />
+      {/* Live Swatch Preview with Hex Code displayed directly below it */}
+      <div className="space-y-1.5 pt-1">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+          <span>Selected Color Swatch</span>
+          <span className="font-mono text-xs font-bold text-purple-400">{currentHex}</span>
         </div>
-        <button
-          type="button"
-          onClick={() => saveRecentColor(currentHex)}
-          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 transition"
-          title="Save this color to recents"
+
+        {/* Live Swatch */}
+        <div
+          className="w-full h-10 rounded-xl border border-white/20 shadow-md relative overflow-hidden flex items-center justify-center transition-colors"
+          style={{ backgroundColor: currentHex }}
         >
-          Save
-        </button>
+          {showAlpha && (
+            <div
+              className="absolute inset-0 -z-10 opacity-30"
+              style={{
+                backgroundImage: 'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
+                backgroundSize: '10px 10px',
+                backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px'
+              }}
+            />
+          )}
+          <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm text-[10px] font-mono font-bold text-white shadow-sm border border-white/10">
+            Live Preview
+          </span>
+        </div>
+
+        {/* Hex Code Field Displayed Directly Below Swatch */}
+        <div className="flex items-center gap-2 pt-0.5">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={hexInput}
+              maxLength={7}
+              onChange={handleHexInputChange}
+              placeholder="#RRGGBB"
+              className="w-full bg-[#090A10] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-purple-400 transition tracking-widest shadow-inner"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => saveRecentColor(currentHex)}
+            className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 transition shrink-0"
+            title="Save this color to recents"
+          >
+            Save
+          </button>
+        </div>
       </div>
 
       {/* Recent & Saved Colors Row */}
